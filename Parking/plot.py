@@ -52,7 +52,7 @@ class ColorScaleManager:
         
 csMangr = ColorScaleManager()
 
-def showGrid(grid,width = 480,height = 450,title = "Parking Grid"):
+def showPark(grid,dir,width = 450,height = 450,title = "Parking Grid"):
     g = np.array(grid)
     g = g[~np.isnan(g)]
     fig = go.Figure(data=go.Heatmap(
@@ -60,6 +60,8 @@ def showGrid(grid,width = 480,height = 450,title = "Parking Grid"):
                     zmin = 0,
                     zmax=1,
                     colorscale = csMangr.getColorScale(),
+                    showscale=False,
+                    
                     ))
 
     fig.update_layout(
@@ -69,6 +71,65 @@ def showGrid(grid,width = 480,height = 450,title = "Parking Grid"):
         height=height,
         margin=dict(l=20, r=20, b=50, t=50),
         showlegend = False,
+    )
+
+    array = np.array(grid)
+    coord = np.where(array == 0.1)
+    
+    x = coord[1][0]
+    y = coord[0][0]
+    
+    x0=y0=x1=y1 = -1
+    x00=y00=x11=y11 = -1
+    
+    if dir == 0: #up
+        x0 = x-0.4
+        y0 = y-0.4
+        x1 = x+0.4
+        y1 = y-0.2
+        x00 = x-0.1
+        y00 = y-0.4
+        x11 = x+0.1
+        y11 = y+0.4
+    elif dir == 1: #left
+        x0 = x+0.2
+        y0 = y-0.4
+        x1 = x+0.4
+        y1 = y+0.4
+        x00 = x-0.4
+        y00 = y-0.1
+        x11 = x+0.4
+        y11 = y+0.1
+    elif dir == 2 : #down
+        x0 = x+0.4
+        y0 = y+0.4
+        x1 = x-0.4
+        y1 = y+0.2
+        x00 = x+0.1
+        y00 = y+0.4
+        x11 = x-0.1
+        y11 = y-0.4
+    elif dir == 3:
+        x0 = x-0.2
+        y0 = y+0.4
+        x1 = x-0.4
+        y1 = y-0.4
+        x00 = x+0.4
+        y00 = y+0.1
+        x11 = x-0.4
+        y11 = y-0.1
+
+    fig.add_shape(
+        type='rect',
+        x0=x0, y0=y0, x1=x1, y1=y1,
+        line=dict(color='white'),
+        fillcolor='rgba(255,255,255,0.5)'
+    )
+    fig.add_shape(
+        type='rect',
+        x0=x00, y0=y00, x1=x11, y1=y11,
+        line=dict(color='white'),
+        fillcolor='rgba(255,255,255,0.5)'
     )
     fig.show()
     # fig = px.density_heatmap(grid,x = "x",y = "y",
