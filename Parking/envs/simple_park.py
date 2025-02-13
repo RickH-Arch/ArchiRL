@@ -236,7 +236,7 @@ class SimplePark:
             else:
                 if s in self.disabled_states:
                     #value = csMangr.GetColorValue("disabled_color",True)[1]
-                    value = np.NaN
+                    value = np.nan
                 elif s in self.entrances_states:
                     value = csMangr.getColorValue("entrance_color")[1]
                 elif s in self.path_states:
