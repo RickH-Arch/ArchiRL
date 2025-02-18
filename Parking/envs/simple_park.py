@@ -2,9 +2,10 @@ import numpy as np
 import plot
 from plot import ColorScaleManager
 import random
+import gym
 
 csMangr = ColorScaleManager()
-class SimplePark:
+class SimplePark():
     '''正交矩形网格空间'''
     def __init__(self,nrow,ncol,disabled_states,entrances_states) -> None:
         '''
