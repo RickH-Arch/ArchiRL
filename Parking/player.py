@@ -1,24 +1,25 @@
-from envs.simple_park_gym import SimplePark
+from envs.simple_park import SimplePark
 import keyboard
 import time
 
 def main():
 
     config = {
-        "nrow": 12,
-        "ncol": 10,
+        "nrow": 10,
+        "ncol": 12,
         "vision_range": 7,
-        # "disabled_states": [9,19,29,39,8,18,28,38,
-        #                     77,78,79,87,88,89,97,98,99,
-        #                     23,24,33,34,43,44],
-        # "entrances_states": [59,2,91],
-        "entrances_states": [35],
+        "disabled_states": [40,41,42,52,53,54,64,65,66,
+                            94,95,106,107,118,119,
+                            0,12,24,36,48,60],
+        
+        "entrances_states": [59,2,113],
+        
         "render_mode": "human"
     }
 
     park = SimplePark(config)
     park.reset()
-    park.show_observation()
+    
     park.render()
     done = False
     total_reward = 0
@@ -41,7 +42,7 @@ def main():
             total_reward += reward
             done = terminated or truncated
             park.render()
-            park.show_observation()
+            
             time.sleep(0.1)
 
         if done:
