@@ -27,7 +27,14 @@ class ColorScaleManager:
                            'park_color' : "rgb(86,145,170)"}
         self.key_list = list(self.color_dict.keys())
 
-    
+    def getColor(self,color_name):
+        '''根据颜色名称返回颜色'''
+        if color_name not in self.key_list:
+            return (0,0,0)
+        value = self.color_dict[color_name]
+        value = value.split("(")[1].split(")")[0].split(",")
+        return tuple(int(v) for v in value)
+
     def getColorValue(self,color_name):
         '''根据颜色名称返回0-1范围内对应颜色的起始值、中间值和结束值'''
         
