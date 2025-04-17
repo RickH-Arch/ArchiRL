@@ -112,6 +112,11 @@ class SimplePark(gym.Env):
 
         self.step_count = 0
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+        self.path_states = [self.agent_state]
+        self.park_states = []
+>>>>>>> afdad09 (n)
 =======
         self.path_states = [self.agent_state]
         self.park_states = []
@@ -254,7 +259,10 @@ class SimplePark(gym.Env):
 
         
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> afdad09 (n)
     def show_observation(self):
         plt.close()
         fig,axes = plt.subplots(1,5,figsize=(15,3))
@@ -277,6 +285,9 @@ class SimplePark(gym.Env):
         
         plt.show()
         plt.pause(0.01)
+<<<<<<< HEAD
+>>>>>>> afdad09 (n)
+=======
 >>>>>>> afdad09 (n)
         
 
