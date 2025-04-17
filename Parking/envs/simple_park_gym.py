@@ -4,23 +4,8 @@ import numpy as np
 import random
 from typing import Optional
 import pygame
-import matplotlib.pyplot as plt
-plt.ion()
 
 class SimplePark(gym.Env):
-    '''
-    简单停车场环境
-    0,ncol------------------nrow,ncol
-    |                      |
-    |                      |
-    |                      |
-    |                      |
-    |                      |
-    |                      |
-    |                      |
-    |                      |
-    0,0 ------------------nrow,0
-    '''
     def __init__(self, config:Optional[dict] = None):
         config = config or {}
         self.nrow = config.get("nrow", 10)
@@ -66,7 +51,7 @@ class SimplePark(gym.Env):
         self.window_size_per_block = 32
         self.clock = None
 
-        #self.reset()
+        self.reset()
 
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
@@ -74,10 +59,8 @@ class SimplePark(gym.Env):
         #set init coord
         if len(self.entrances_states) == 0:
             self.agent_state = random.choice(self.all_states)
-            
         else:
-            #self.agent_state = random.choice(self.entrances_states)
-            self.agent_state = self.entrances_states[1]
+            self.agent_state = random.choice(self.entrances_states)
 
         self.agent_dir = -1
 
@@ -111,8 +94,6 @@ class SimplePark(gym.Env):
         print(f"------智能体初始方向:{dir_string}------")
 
         self.step_count = 0
-        self.path_states = [self.agent_state]
-        self.park_states = []
         obs = self.observe()
         return obs,{}
 
@@ -138,7 +119,6 @@ class SimplePark(gym.Env):
 
         self.agent_state = next_state
 
-        pre_num_park = len(self.park_states)
         #更新车道、车位
         #path
         if self.agent_state in self.park_states:
@@ -147,7 +127,7 @@ class SimplePark(gym.Env):
             self.path_states.append(self.agent_state)
         
         #park
-        
+        pre_num_park = len(self.park_states)
         parks = []
         left_state = self.__nextState(self.agent_state,(self.agent_dir+1)%4)
         if left_state != self.agent_state:
@@ -219,15 +199,15 @@ class SimplePark(gym.Env):
         self.obs_total = obs_total
 
         #根据智能体当前行进方向旋转矩阵
-        # for i in range(len(obs_total)):
-        #     cut = obs_total[i,:,:]
-        #     if self.agent_dir == 1:
-        #         cut = np.rot90(cut)
-        #     elif self.agent_dir == 2:
-        #         cut = np.rot90(cut,k=2)
-        #     elif self.agent_dir == 3:
-        #         cut = np.rot90(cut,k=3)
-        #     obs_total[i,:,:] = cut
+        for i in range(len(obs_total)):
+            cut = obs_total[i,:,:]
+            if self.agent_dir == 1:
+                cut = np.rot90(cut)
+            elif self.agent_dir == 2:
+                cut = np.rot90(cut,k=2)
+            elif self.agent_dir == 3:
+                cut = np.rot90(cut,k=3)
+            obs_total[i,:,:] = cut
             
         #获取当前智能体感知范围
         center = self.stateToCoord(self.agent_state)
@@ -243,35 +223,10 @@ class SimplePark(gym.Env):
                 #其他视域，替换所有-1为0
                 submatrix[submatrix == -1] = 0
             self.obs[i,:,:] = submatrix
-        #上下翻转self.obs
-        for i in range(5):
-            self.obs[i,:,:] = np.flip(self.obs[i,:,:],axis=0)
         return self.obs
             
 
         
-    def show_observation(self):
-        plt.close()
-        fig,axes = plt.subplots(1,5,figsize=(15,3))
-        for i in range(5):
-            if i == 0:
-                axes[i].set_title("undefined")
-            elif i == 1:
-                axes[i].set_title("park")
-            elif i == 2:
-                axes[i].set_title("path")
-            elif i == 3:
-                axes[i].set_title("disabled")
-            elif i == 4:
-                axes[i].set_title("entrance")
-            array = self.obs[i,:,:]
-            array[len(array)//2,len(array[0])//2] = 2
-            axes[i].imshow(array)
-            axes[i].axis('off')
-        plt.tight_layout()
-        
-        plt.show()
-        plt.pause(0.01)
         
 
 
@@ -284,9 +239,8 @@ class SimplePark(gym.Env):
         return int(y*self.ncol+x)
     
     def stateToCoord(self,state):
-        
-        x = state%self.nrow
-        y = state//self.nrow
+        x = state%self.ncol
+        y = state//self.ncol
         return (x,y)
     
     def isStateActive(self, state):
@@ -498,8 +452,6 @@ class SimplePark(gym.Env):
                           y*self.window_size_per_block,
                           self.window_size_per_block,
                           self.window_size_per_block))
-        
-   
         
 class ColorScaleManager:
 

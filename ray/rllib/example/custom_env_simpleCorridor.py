@@ -27,7 +27,6 @@ parser.add_argument(
 class SimpleCorridor(gym.Env):
     """
     Simple corridor environment with a goal state.
-    
     """
     def __init__(self, config: Optional[dict] = None):
         config = config or {}
