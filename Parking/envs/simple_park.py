@@ -5,9 +5,14 @@ import random
 from typing import Optional
 import pygame
 import matplotlib.pyplot as plt
-plt.ion()
-fig_mgr = plt.get_current_fig_manager()
-fig_mgr.window.geometry("+0+0")
+import platform
+
+SYSTEM = platform.system()
+if SYSTEM == "Windows":
+    plt.ion()
+    fig_mgr = plt.get_current_fig_manager()
+    fig_mgr.window.geometry("+0+0")
+
 
 class SimplePark(gym.Env):
     '''
@@ -27,7 +32,7 @@ class SimplePark(gym.Env):
         config = config or {}
         self.nrow = config.get("nrow", 10)
         self.ncol = config.get("ncol", 10)
-        self.vision_range = config.get("vision_range", 5)
+        self.vision_range = config.get("vision_range", 7)
         #vison_range 是否为奇数？
         assert self.vision_range % 2 == 1, "vision_range must be odd"
         self.all_states = list(range(self.nrow*self.ncol))
@@ -35,6 +40,9 @@ class SimplePark(gym.Env):
         self.entrances_states = []
         entrances_states = config.get("entrances_states", [])
         self.render_mode = config.get("render_mode", "rgb_array")
+        self.random_reward = config.get("random_reward", False)
+
+        self.rewards = []
         
         #出入口是否靠近边缘
         for s in entrances_states:
@@ -55,19 +63,21 @@ class SimplePark(gym.Env):
 
         self.action_space = Discrete(4) #动作空间，0：前，1：后，2：左，3：右
 
-        self.observation_space = Box(low=0,high=1,shape=(5,self.vision_range,self.vision_range),dtype=np.float32)
+        self.observation_space = Box(low=-1,high=1,shape=(self.vision_range*self.vision_range*5 + 
+                                                         1 #当前智能体动作
+                                                         ,),dtype=np.float32)
 
         self.park_states = [] #当前是车位的坐标状态
         self.path_states = [] #当前是通道的坐标状态
 
         self.step_count = 0
-        self.max_step = self.ncol*self.nrow*1.5
+        self.max_step = self.ncol*self.nrow*3
 
         #渲染窗口：
         self.window = None
         self.window_size_per_block = 48
         self.clock = None
-
+        self.action = -1 #当前智能体动作
         #self.reset()
 
 
@@ -78,8 +88,8 @@ class SimplePark(gym.Env):
             self.agent_state = random.choice(self.all_states)
             
         else:
-            #self.agent_state = random.choice(self.entrances_states)
-            self.agent_state = self.entrances_states[0]
+            self.agent_state = random.choice(self.entrances_states)
+            #self.agent_state = self.entrances_states[0]
 
         self.agent_dir = -1
 
@@ -96,7 +106,7 @@ class SimplePark(gym.Env):
                 self.agent_dir = random.choice(accessible_dirs)
 
         x,y = self.stateToCoord(self.agent_state)
-        print(f"------智能体初始坐标:{(x,y)}------")
+        #print(f"------智能体初始坐标:{(x,y)}------")
 
         dir_string = ""
         if self.agent_dir == -1:
@@ -110,21 +120,25 @@ class SimplePark(gym.Env):
         elif self.agent_dir == 3:
             dir_string = "右"
 
-        print(f"------智能体初始方向:{dir_string}------")
+        self.action = -1
+
+        #print(f"------智能体初始方向:{dir_string}------")
 
         self.step_count = 0
 
         self.path_states = []
         self.park_states = []
+        self.rewards = []
 
         obs = self.observe()
         return obs,{}
 
-    def step(self, action:int):
+    def step(self, action):
         assert action in self.action_space, f'Invalid action: {action}'
-
+        
         self.step_count += 1
         pre_state = self.agent_state
+        self.action = action
 
         if action == 0:
             self.agent_dir = self.agent_dir
@@ -136,11 +150,16 @@ class SimplePark(gym.Env):
             self.agent_dir = (self.agent_dir - 1) % 4
 
         next_state = self.__nextState(self.agent_state,self.agent_dir)
+
+        punishment = 0
         if next_state == self.agent_state:
             #如碰壁则方向倒转，避免智能体一直接收相同的环境信息，但state不改变
-            self.agent_dir = (self.agent_dir - 2) % 4
+            #self.agent_dir = (self.agent_dir - 2) % 4
+            punishment = -50
 
         self.agent_state = next_state
+
+        reach_entry = next_state in self.entrances_states and next_state not in self.path_states
 
         pre_num_park = len(self.park_states)
         #更新车道、车位
@@ -179,25 +198,39 @@ class SimplePark(gym.Env):
 
         park_delta = len(self.park_states) - pre_num_park
 
+        
+
         #calculate reward
-        reward = park_delta*random.uniform(0.5,1.5) - 0.05 + (next_state in self.entrances_states)*5
+        if self.random_reward:
+            reward = park_delta*3*random.uniform(0.5,1.5) - 1 + reach_entry*50 + punishment
+        else:
+            reward = park_delta*3 - 1 + reach_entry*50 + punishment
 
         truncated = self.step_count >= self.max_step
         terminated = truncated or self.__allEntrancesReached()
         obs = self.observe()
+        #print(f"------智能体动作:{action}------path_states:{self.path_states}------")
+        #print(f"------智能体当前状态:{obs}------")
+        #print(f"------智能体当前奖励:{reward}------")
+        #print(f"------智能体当前终止:{terminated}------")
+        self.rewards.append(reward)
+        if self.__allEntrancesReached():
+            print(f"------所有出入口均被访问过------parking count:{len(self.park_states)}------avg reward:{sum(self.rewards)/len(self.rewards)}-------total reward:{sum(self.rewards)}")
+        if truncated:
+            print(f"------环境截断:{truncated}------parking count:{len(self.park_states)}------avg reward:{sum(self.rewards)/len(self.rewards)}-------total reward:{sum(self.rewards)}")
         return obs,reward,terminated,truncated,{"env_state":"step"}
 
     def render(self):
         if self.render_mode == "human":
             self.__render_frame()
             self.show_observation()
-        else:
+        else: 
             return self.__render_frame()
         
 
     
     def observe(self) -> np.ndarray:
-        '''获取当前环境信息,返回给智能体'''
+        '''获取当前环境信息,返回给智能体 ->  部分可观测环境'''
         #由当前智能体方向决定三维矩阵
         #矩阵大小为5*vision_range*vision_range(未定义、车位、通道、障碍物(边界）、出入口)
         #矩阵中心为当前智能体位置
@@ -261,7 +294,18 @@ class SimplePark(gym.Env):
             elif self.agent_dir == 3:
                 cut = np.rot90(cut,k=1)
             self.obs[i,:,:] = cut
-        return self.obs
+
+        self.obs = self.obs.astype(np.float32)
+        
+        result = self.obs
+        #flatten
+        result = np.transpose(result,(1,2,0))
+        result = result.reshape(-1)
+
+        # add action
+        result = np.append(result,self.action/4)
+        result = result.astype(np.float32)
+        return result
             
 
         

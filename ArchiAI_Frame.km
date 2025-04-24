@@ -1,0 +1,416 @@
+{
+    "root": {
+        "data": {
+            "id": "d9c3b4rcqbs0",
+            "created": 1745215631086,
+            "text": "建筑生命周期"
+        },
+        "children": [
+            {
+                "data": {
+                    "id": "d9c3beit83s0",
+                    "created": 1745215652338,
+                    "text": "策划"
+                },
+                "children": [
+                    {
+                        "data": {
+                            "id": "d9c3bspgc9c0",
+                            "created": 1745215683214,
+                            "text": "产业规划",
+                            "font-weight": "bold"
+                        },
+                        "children": [
+                            {
+                                "data": {
+                                    "id": "d9c3hvzki940",
+                                    "created": 1745216160541,
+                                    "text": "由业主（或政府、企业等）发起，基于市场需求、城市规划、企业战略等提出项目意向（如新建住宅、商业综合体、基础设施等）",
+                                    "background": "transparent",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c3i8fcnqw0",
+                                    "created": 1745216187617,
+                                    "text": "评估区域经济、人口、交通、环境等因素，明确项目功能定位（如住宅的户型配比、商业体的业态规划）。",
+                                    "background": "transparent",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "data": {
+                            "id": "d9c3c4gl44g0",
+                            "created": 1745215708799,
+                            "text": "可行性研究",
+                            "font-weight": "bold"
+                        },
+                        "children": [
+                            {
+                                "data": {
+                                    "id": "d9c3i1zc6ao0",
+                                    "created": 1745216173588,
+                                    "text": "技术可行性：分析地质条件、施工难度、材料供应等。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c3ihv7e140",
+                                    "created": 1745216208166,
+                                    "text": "经济可行性：测算投资预算、成本收益、投资回报率等。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c3imbeetc0",
+                                    "created": 1745216217853,
+                                    "text": "社会与环境影响评估：分析项目对周边社区、生态环境的影响，编制环境影响报告（EIA）。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "data": {
+                            "id": "d9c3dmelhog0",
+                            "created": 1745215826225,
+                            "text": "决策审批",
+                            "font-weight": "bold"
+                        },
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "data": {
+                    "id": "d9c3bgx7j600",
+                    "created": 1745215657562,
+                    "text": "设计"
+                },
+                "children": [
+                    {
+                        "data": {
+                            "id": "d9c3czppjqo0",
+                            "created": 1745215776831,
+                            "text": "方案设计",
+                            "font-weight": "bold"
+                        },
+                        "children": [
+                            {
+                                "data": {
+                                    "id": "d9c3j3kxu600",
+                                    "created": 1745216255435,
+                                    "text": "建筑师主导，结合功能需求与美学要求，完成建筑平面布局、外观造型、空间结构等初步设计。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c3j90wl5s0",
+                                    "created": 1745216267284,
+                                    "text": "与业主沟通确认设计方案，可能需多轮修改（如通过效果图、三维模型展示）。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "data": {
+                            "id": "d9c3d1408o80",
+                            "created": 1745215779872,
+                            "text": "初步设计",
+                            "font-weight": "bold"
+                        },
+                        "children": [
+                            {
+                                "data": {
+                                    "id": "d9c3jw910m80",
+                                    "created": 1745216317841,
+                                    "text": "细化方案，确定建筑结构形式（如框架结构、钢结构）、机电系统（给排水、电气、暖通）、消防设计等",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c3k2qr2mg0",
+                                    "created": 1745216331974,
+                                    "text": "编制初步设计概算，估算项目总投资，作为资金筹措依据。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "data": {
+                            "id": "d9c3d6bjvyg0",
+                            "created": 1745215791213,
+                            "text": "施工图设计",
+                            "font-weight": "bold"
+                        },
+                        "children": [
+                            {
+                                "data": {
+                                    "id": "d9c3ke5fcog0",
+                                    "created": 1745216356806,
+                                    "text": "各专业（建筑、结构、机电、消防等）深化设计，绘制详细施工图纸（如建筑平面图、结构配筋图、管线综合图）。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c3kjxxb340",
+                                    "created": 1745216369413,
+                                    "text": "进行图纸审查（如消防审查、节能审查），确保符合规范标准。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "data": {
+                    "id": "d9c3biun0nk0",
+                    "created": 1745215661761,
+                    "text": "施工"
+                },
+                "children": [
+                    {
+                        "data": {
+                            "id": "d9c3eeqrv0w0",
+                            "created": 1745215887911,
+                            "text": "施工准备",
+                            "font-weight": "bold"
+                        },
+                        "children": [
+                            {
+                                "data": {
+                                    "id": "d9c3wki2mxk0",
+                                    "created": 1745217311001,
+                                    "text": "招投标：选择施工单位、监理单位，签订合同。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c52twu3o80",
+                                    "created": 1745220622780,
+                                    "text": "现场准备：场地平整、临时设施搭建、施工用水用电接入。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c530pna1c0",
+                                    "created": 1745220637582,
+                                    "text": "技术交底：设计团队向施工方交底，明确图纸细节与技术要求。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "data": {
+                            "id": "d9c5372n7b40",
+                            "created": 1745220651429,
+                            "text": "工程施工",
+                            "font-weight": "bold"
+                        },
+                        "children": [
+                            {
+                                "data": {
+                                    "id": "d9c558spxgg0",
+                                    "created": 1745220811911,
+                                    "text": "基础工程：土方开挖、桩基施工、地下结构等。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c55capu8g0",
+                                    "created": 1745220819529,
+                                    "text": "主体结构施工：钢筋混凝土浇筑、钢结构安装等。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c55g5wpqg0",
+                                    "created": 1745220827946,
+                                    "text": "装饰装修与设备安装：内外墙装修、门窗安装、机电设备调试等。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "data": {
+                            "id": "d9c53okptw00",
+                            "created": 1745220689527,
+                            "text": "过程管理",
+                            "font-weight": "bold"
+                        },
+                        "children": [
+                            {
+                                "data": {
+                                    "id": "d9c55mlqa0o0",
+                                    "created": 1745220841963,
+                                    "text": "监理单位全程监督，控制施工质量（如隐蔽工程验收）、进度（对比施工计划）、成本（签证与变更管理）。",
+                                    "progress": null,
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c55rdqyw80",
+                                    "created": 1745220852364,
+                                    "text": "应对现场问题（如地质异常、设计变更），协调业主、设计、施工各方沟通。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "data": {
+                            "id": "d9c53q98n1k0",
+                            "created": 1745220693187,
+                            "text": "竣工验收",
+                            "font-weight": "bold"
+                        },
+                        "children": [
+                            {
+                                "data": {
+                                    "id": "d9c55wjd5lk0",
+                                    "created": 1745220863588,
+                                    "text": "分部分项工程验收（如主体结构、消防工程）、综合竣工验收（政府部门参与）。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c560surwg0",
+                                    "created": 1745220872869,
+                                    "text": "整改验收问题，取得竣工备案表，完成工程档案移交。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "data": {
+                    "id": "d9c3bkxze6g0",
+                    "created": 1745215666316,
+                    "text": "运营维护"
+                },
+                "children": [
+                    {
+                        "data": {
+                            "id": "d9c53z355ig0",
+                            "created": 1745220712409,
+                            "text": "交付运营",
+                            "font-weight": "bold"
+                        },
+                        "children": [
+                            {
+                                "data": {
+                                    "id": "d9c568jzb2g0",
+                                    "created": 1745220889747,
+                                    "text": "向业主或使用方交付项目（如物业、业主委员会），移交钥匙与设备清单。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c56dms9ds0",
+                                    "created": 1745220900800,
+                                    "text": "商业项目招商运营，住宅项目开展物业管理（安保、保洁、设施维护）。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "data": {
+                            "id": "d9c54cbpla80",
+                            "created": 1745220741225,
+                            "text": "维护更新",
+                            "font-weight": "bold"
+                        },
+                        "children": [
+                            {
+                                "data": {
+                                    "id": "d9c56hn9o480",
+                                    "created": 1745220909536,
+                                    "text": "定期保养设施设备（如电梯、消防系统），处理日常故障（如漏水、电路问题）。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            },
+                            {
+                                "data": {
+                                    "id": "d9c56li6fj40",
+                                    "created": 1745220917936,
+                                    "text": "根据使用需求或技术发展，对建筑进行改造升级（如节能改造、智能化系统加装）。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "data": {
+                            "id": "d9c54eb682o0",
+                            "created": 1745220745546,
+                            "text": "性能评估",
+                            "font-weight": "bold"
+                        },
+                        "children": [
+                            {
+                                "data": {
+                                    "id": "d9c56q4uki00",
+                                    "created": 1745220928014,
+                                    "text": "分析建筑使用效率（如出租率、人流量）、能耗水平、用户满意度等，优化运营策略。",
+                                    "color": "#a6a6a6"
+                                },
+                                "children": []
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "template": "filetree",
+    "theme": "fresh-blue",
+    "version": "1.4.43"
+}
