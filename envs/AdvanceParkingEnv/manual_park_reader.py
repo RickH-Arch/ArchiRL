@@ -25,7 +25,7 @@ class ManualParkReader:
                 down = block[2][1]
                 left = block[1][0]
                 right = block[1][2]
-                unit = ParkUnit(edge_carNum=[up,down,left,right],coord=(c,r))
+                unit = ParkUnit(edge_carNum=[up,left,down,right],coord=(c,r))
                 
                 units_row.append(unit)
             units_mat.append(units_row)

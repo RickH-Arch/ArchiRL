@@ -1,15 +1,53 @@
 from manual_park_reader import ManualParkReader
 from advance_park import AdvancePark
+import keyboard
+import time
 
 file_path = 'envs/AdvanceParkingEnv/manual_park_data.csv'
 
-reader = ManualParkReader()
-units_pack = reader.read(file_path)
+def main():
+    reader = ManualParkReader()
+    units_pack = reader.read(file_path)
 
-config = {
-    
-}
+    config = {
+        "units_pack": units_pack,
+        "vision_range": 7,
+        "render_mode": "human"
+    }
 
-env = AdvancePark(units_pack)
-env.reset()
-env.render()
+    park = AdvancePark(config)
+    park.reset()
+    park.render()
+
+    done = False
+    total_reward = 0
+
+    while not done:
+        action = None
+
+        if keyboard.is_pressed("up"):
+            action = 0#forward
+        elif keyboard.is_pressed("down"):
+            action = 1#backward
+        elif keyboard.is_pressed("left"):
+            action = 2#left
+        elif keyboard.is_pressed("right"):
+            action = 3#right
+
+        if action is not None:
+            observation, reward, terminated, truncated, info = park.step(action)
+            print(f"reward: {reward}, terminated: {terminated}, truncated: {truncated}")
+            total_reward += reward
+            done = terminated or truncated
+
+            park.render()
+            time.sleep(0.1)
+
+        if done:
+            print(f"回合结束，总奖励: {total_reward}")
+            observation, info = park.reset()
+
+    park.close()
+
+if __name__ == "__main__":
+    main()

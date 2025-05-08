@@ -54,9 +54,7 @@ class ParkUnitMatPack:
         for unit in self.get_flatten_units():
             if unit.is_lane:
                 continue
-            for i in range(4):
-                if unit.edge_state[i] == 1:
-                    num += unit.edge_carNum[i]
+            num += unit.get_car_num()
         return num
     
     def connect_neighbor(self):
@@ -135,16 +133,16 @@ class ParkUnit:
                 if neib is None:
                     continue
                 if i == 0:
-                    if neib.edge_carNum[1] < 2:
+                    if neib.edge_carNum[2] < 2:
                         continue
                 elif i == 1:
-                    if neib.edge_carNum[0] < 2:
-                        continue
-                elif i == 2:
                     if neib.edge_carNum[3] < 2:
                         continue
+                elif i == 2:
+                    if neib.edge_carNum[0] < 2:
+                        continue
                 elif i == 3:
-                    if neib.edge_carNum[2] < 2:
+                    if neib.edge_carNum[1] < 2:
                         continue
                 accessible.append(i)
         return accessible
@@ -166,3 +164,50 @@ class ParkUnit:
                 self.neighbor_unit[i].edge_state[0] = 1
             elif i == 3:
                 self.neighbor_unit[i].edge_state[1] = 1
+
+    def get_car_num(self):
+        '''
+        获取单元内车辆数
+        '''
+
+
+        total = 0
+        real = [0]*4
+        n = 0
+        ind = []
+        for i in range(4):
+            if self.edge_state[i] == 1:
+                real[i] = self.edge_carNum[i]
+                n+=1
+                ind.append(i)
+        
+        
+        if n == 0:
+            total =  0
+        elif n == 1:
+            total = sum(real)
+        elif n == 2:
+            #对向停车？
+            if abs(ind[0] - ind[1]) == 2:
+                total = real[ind[0]] + real[ind[1]]
+            #相邻两边停车？
+            else:
+                total = max(real[ind[0]],real[ind[1]])+1
+        elif n == 3:
+            #find the missing edge
+            me = -1
+            for i in range(4):
+                if self.edge_state[i] != 1:
+                    me = i
+                    break
+            if me == -1:
+                total = 0
+            else:
+                total = self.edge_carNum[(me-1)%4] + self.edge_carNum[(me+1)%4]
+        else:
+            n1 = self.edge_carNum[0] + self.edge_carNum[2]
+            n2 = self.edge_carNum[1] + self.edge_carNum[3]
+            total = max(n1,n2)
+        return total * 0.5
+        
+        

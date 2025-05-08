@@ -6,10 +6,10 @@ from typing import Optional
 import pygame
 import matplotlib.pyplot as plt
 import platform
-import torch
+
 import os
 from PIL import Image
-from park_unit import ParkUnit
+
 
 SYSTEM = platform.system()
 if SYSTEM == "Windows":
@@ -72,21 +72,23 @@ nrow-1,0 ---------------ncol-1,nrow-1
 
         self.step_count = 0
         self.max_step = self.ncol*self.nrow*self.max_step_index
+        self.iter_count = 0
 
         #渲染窗口
         self.window = None
-        self.window_size_per_block = 36
+        self.window_size_per_block = 64
         self.clock = None
         
     def reset(self,seed:Optional[int] = None,options:Optional[dict] = None):
         random.seed(seed)
-        self.count += 1
+        self.iter_count += 1
         #set init coord
-        if len(self.entrances_states) == 0:
+        if len(self.entrance_states) == 0:
             self.agent_state = random.choice(self.all_states)
         else:
-            self.agent_state = random.choice(self.entrances_states)
+            self.agent_state = random.choice(self.entrance_states)
 
+        
         self.start_state = self.agent_state
         self.agent_dir = -1
 
@@ -106,6 +108,7 @@ nrow-1,0 ---------------ncol-1,nrow-1
         else:
             self.agent_dir = random.choice(accessible_edges)
 
+        print(f"智能体初始方向：{self.agent_dir}")
         obs =  self.observe()
         return obs,{}
     
@@ -136,19 +139,24 @@ nrow-1,0 ---------------ncol-1,nrow-1
             self.traj[traj] += 1
         else:
             self.traj[traj] = 1
+        print(f"next_state:{next_state},legal:{legal}")
 
-        self.agent_state = next_state
-        reach_entry = next_state in self.entrances_states and next_state not in self.path_states
+        reach_entry = False
+        if legal:
+            self.agent_state = next_state
+
+            unit = self.units_pack.get_unit_byState(self.agent_state)
+            reach_entry = unit.is_entrance and not unit.is_lane
 
         pre_park_num = self.units_pack.get_total_park_num()
 
-        unit = self.units_pack.get_unit_byState(next_state)
+        unit = self.units_pack.get_unit_byState( self.agent_state)
         if not unit.is_lane:
             unit.turn_to_lane()
 
         post_park_num = self.units_pack.get_total_park_num()
 
-        punishment = legal * -50
+        punishment = (1-legal) * -50
         reward = (post_park_num - pre_park_num)*3 - 0.5 + reach_entry*50 + punishment
         self.rewards.append(reward)
 
@@ -184,7 +192,13 @@ nrow-1,0 ---------------ncol-1,nrow-1
         '''
         观察当前状态
         '''
+        #TODO: 观察当前状态
         return []
+    
+    def close(self):
+        if self.window is not None:
+            pygame.display.quit()
+            pygame.quit()
         
 
     def __nextState(self,state,dir):
@@ -195,7 +209,10 @@ nrow-1,0 ---------------ncol-1,nrow-1
         accessible = unit.get_accessible()
         
         if dir not in accessible:
-            return unit.neighbor_unit[dir].state,False
+            if unit.neighbor_unit[dir] is not None:
+                return unit.neighbor_unit[dir].state,False
+            else:
+                return state,False
         else:
             return unit.neighbor_unit[dir].state,True
         
@@ -233,8 +250,8 @@ nrow-1,0 ---------------ncol-1,nrow-1
                 continue
             coord = unit.coord
             for i in range(4):
-                scale,offset = self.__get_park_scale_and_offset(i,unit.edge_count[i])
-                if unit.edge_count[i] > 0:
+                scale,offset = self.__get_park_scale_and_offset(i,unit.edge_carNum[i])
+                if unit.edge_carNum[i] > 0:
                     if unit.edge_state[i] == 1:
                         self.__draw_rec(canvas,coord,park_color,scale,offset)
                     elif unit.edge_state[i] == 0:
@@ -243,7 +260,7 @@ nrow-1,0 ---------------ncol-1,nrow-1
                     self.__draw_rec(canvas,coord,boundary_color,scale,offset)
 
         #绘制车道
-        park_color = cMgr.getColor("park_color")
+        park_color = cMgr.getColor("path_color")
         for unit in self.units_pack.get_flatten_units():
             if unit.is_lane:
                 coord = unit.coord
@@ -258,37 +275,38 @@ nrow-1,0 ---------------ncol-1,nrow-1
                 self.__draw_rec(canvas,coord,cMgr.getColor("entrance_color"))
 
         #绘制轨迹
-        traj_color = cMgr.getColor("traj_color")
-        max_count = max(self.traj.values())
-        min_count = min(self.traj.values())
-        if max_count == min_count:
-            for t in self.traj:
-                self.traj[t] = 1
-        else:
-            for t in self.traj:
-                self.traj[t] = ((self.traj[t] - min_count) / (max_count - min_count))*5+1
+        if len(self.traj) > 0:
+            traj_color = cMgr.getColor("traj_color")
+            max_count = max(self.traj.values())
+            min_count = min(self.traj.values())
+            if max_count == min_count:
+                for t in self.traj:
+                    self.traj[t] = 1
+            else:
+                for t in self.traj:
+                    self.traj[t] = ((self.traj[t] - min_count) / (max_count - min_count))*5+1
 
-        #self.traj = {list(self.traj.keys())[0]:self.traj[list(self.traj.keys())[0]]}
-        for key in self.traj.keys():
-            start_coord = self.stateToCoord(int(key.split("->")[0]))
-            direction = int(key.split("->")[1])
-            end_coord = start_coord
-            #tuple to list
-            end_coord = list(end_coord)
+            #self.traj = {list(self.traj.keys())[0]:self.traj[list(self.traj.keys())[0]]}
+            for key in self.traj.keys():
+                start_coord = self.stateToCoord(int(key.split("->")[0]))
+                direction = int(key.split("->")[1])
+                end_coord = start_coord
+                #tuple to list
+                end_coord = list(end_coord)
 
-            if direction == 0:
-                end_coord[1]+=0.3
-            elif direction == 1:
-                end_coord[0]-=0.3
-            elif direction == 2:
-                end_coord[1]-=0.3
-            elif direction == 3:
-                end_coord[0]+=0.3
-            pygame.draw.line(canvas,traj_color,(start_coord[0]*self.window_size_per_block+self.window_size_per_block//2,
-                                                start_coord[1]*self.window_size_per_block+self.window_size_per_block//2),
-                                                (end_coord[0]*self.window_size_per_block+self.window_size_per_block//2,
-                                                end_coord[1]*self.window_size_per_block+self.window_size_per_block//2),
-                                                int(self.traj[key]))
+                if direction == 0:
+                    end_coord[1]+=0.3
+                elif direction == 1:
+                    end_coord[0]-=0.3
+                elif direction == 2:
+                    end_coord[1]-=0.3
+                elif direction == 3:
+                    end_coord[0]+=0.3
+                pygame.draw.line(canvas,traj_color,(start_coord[0]*self.window_size_per_block+self.window_size_per_block//2,
+                                                    start_coord[1]*self.window_size_per_block+self.window_size_per_block//2),
+                                                    (end_coord[0]*self.window_size_per_block+self.window_size_per_block//2,
+                                                    end_coord[1]*self.window_size_per_block+self.window_size_per_block//2),
+                                                    int(self.traj[key]))
 
         #绘制智能体
         unit = self.units_pack.get_unit_byState(self.agent_state)
@@ -300,7 +318,7 @@ nrow-1,0 ---------------ncol-1,nrow-1
                            agent_color,
                            (canvas_x,canvas_y),
                            self.window_size_per_block//3)
-        if self.agent_dir == 0:#up
+        if self.agent_dir == 2:#down
             pygame.draw.line(canvas,
                              agent_color,
                              (canvas_x,
@@ -316,7 +334,7 @@ nrow-1,0 ---------------ncol-1,nrow-1
                              (canvas_x-self.window_size_per_block//1.5,
                               canvas_y),
                              self.window_size_per_block//6)
-        elif self.agent_dir == 2:#down
+        elif self.agent_dir == 0:#up
             pygame.draw.line(canvas,
                              agent_color,
                              (canvas_x,
@@ -334,8 +352,8 @@ nrow-1,0 ---------------ncol-1,nrow-1
                              self.window_size_per_block//6)
             
         #绘制当前智能体感知范围
-        vision_color = (0,0,0)
-        coord = self.stateToCoord(self.agent_state)
+        vision_color = (246,248,234)
+        coord = robot_coord
         rec_origin_x = (coord[0]-self.vision_range/2 +0.5)*self.window_size_per_block
         rec_origin_y = (coord[1]-self.vision_range/2 +0.5)*self.window_size_per_block
         pygame.draw.rect(canvas,
@@ -346,13 +364,25 @@ nrow-1,0 ---------------ncol-1,nrow-1
                           self.window_size_per_block*self.vision_range),
                          2)
         
-         #flip the canvas
-        canvas = pygame.transform.flip(canvas,False,True)
+        #绘制网格
+        mesh_color = cMgr.getColor("mesh_color")
+        for i in range(self.ncol):
+            pygame.draw.line(canvas,
+                             mesh_color,
+                             (i*self.window_size_per_block,0),
+                             (i*self.window_size_per_block,self.window_size_per_block*self.nrow))
+        for i in range(self.nrow):
+            pygame.draw.line(canvas,
+                             mesh_color,
+                             (0,i*self.window_size_per_block),
+                             (self.window_size_per_block*self.ncol,i*self.window_size_per_block))
+        
+        
         if self.render_mode == "human":
             self.window.blit(canvas,canvas.get_rect())
             pygame.event.pump()
             pygame.display.update()
-            self.clock.tick(60)
+            self.clock.tick(6000)
         else:
             return np.transpose(np.array(pygame.surfarray.pixels3d(canvas)),axes=(1,0,2))
     
@@ -366,8 +396,8 @@ nrow-1,0 ---------------ncol-1,nrow-1
         x,y = coord
         pygame.draw.rect(canvas,
                          color,
-                         (x*self.window_size_per_block + (self.window_size_per_block-self.window_size_per_block*scale[0])//2 + offset[0]*self.window_size_per_block,
-                          y*self.window_size_per_block + (self.window_size_per_block-self.window_size_per_block*scale[1])//2 + offset[1]*self.window_size_per_block,
+                         (x*self.window_size_per_block + 1 + (self.window_size_per_block-self.window_size_per_block*scale[0])//2 + offset[0]*self.window_size_per_block,
+                          y*self.window_size_per_block + 1 + (self.window_size_per_block-self.window_size_per_block*scale[1])//2 + offset[1]*self.window_size_per_block,
                           self.window_size_per_block*scale[0],
                           self.window_size_per_block*scale[1]))
         
@@ -377,17 +407,28 @@ nrow-1,0 ---------------ncol-1,nrow-1
             sc = 1
         if dir == 0:
             scale = (sc,0.1)
-            offset = (0,-0.9)
+            offset = (0,-0.4)
         elif dir == 1:
             scale = (0.1,sc)
-            offset = (-0.9,0)
+            offset = (-0.4,0)
         elif dir == 2:
             scale = (sc,0.1)
-            offset = (0,0.9)
+            offset = (0,0.4)
         elif dir == 3:
             scale = (0.1,sc)
-            offset = (0.9,0)
+            offset = (0.4,0)
         return scale,offset
+    
+    def coordToState(self,coord):
+        x,y = coord
+        return int(y*self.ncol+x)
+    
+    def stateToCoord(self,state):
+        
+        x = state%self.ncol
+        y = state//self.ncol
+        return (x,y)
+    
 
 class ColorManager:
 
@@ -407,7 +448,8 @@ class ColorManager:
                            'path_color' : "rgb(241,199,135)",
                            'vacant_park_color' : "rgb(190,190,190)",
                            'park_color' : "rgb(86,145,170)",
-                           'traj_color' : "rgb(250,124,69)"}
+                           'traj_color' : "rgb(250,124,69)",
+                           'mesh_color' : "rgb(200,200,200)"}
         self.key_list = list(self.color_dict.keys())
 
     def getColor(self,color_name):
