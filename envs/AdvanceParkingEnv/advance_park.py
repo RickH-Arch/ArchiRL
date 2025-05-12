@@ -64,10 +64,17 @@ nrow-1,0 ---------------ncol-1,nrow-1
         self.action_space = Discrete(4) #动作空间，0：向前，1：向后，2：向左，3：向右
 
         #461
-        self.observation_space = Box(low=0,high=4,shape=(self.vision_range*self.vision_range *4 +  #周边的停车数量信息，4 -> 4条边  
-                                                          self.vision_range*self.vision_range*4 +  #周边的停车状态信息（是否已是停车位）
+        # self.observation_space = Box(low=0,high=4,shape=(self.vision_range*self.vision_range *4 +  #周边的停车数量信息，4 -> 4条边  
+        #                                                   self.vision_range*self.vision_range*4 +  #周边的停车状态信息（是否已是停车位）
+        #                                                   self.vision_range*self.vision_range*1 +  #周边单元信息， -1:车道， 0:未定义， 1: 出入口
+        #                                                  1*10 +#当前智能体动作
+        #                                                  1*10 #当前智能体方向  
+        #                                                  ,),dtype=np.float32)
+        
+        #265
+        self.observation_space = Box(low=-4,high=4,shape=(self.vision_range*self.vision_range *4 +  #周边的停车数量信息，4 -> 4条边 ,已是停车位为负，未定义停车位为正
                                                           self.vision_range*self.vision_range*1 +  #周边单元信息， -1:车道， 0:未定义， 1: 出入口
-                                                         1*10 +#当前智能体动作
+                                                          1*10 +#当前智能体动作
                                                          1*10 #当前智能体方向  
                                                          ,),dtype=np.float32)
         
@@ -184,6 +191,12 @@ nrow-1,0 ---------------ncol-1,nrow-1
         self.park_num = post_park_num
 
         punishment = (1-legal) * -50
+        #左右转、断头路惩罚
+        if action == 1 or action == 3:
+            punishment += 5
+        elif action == 2:
+            punishment += 10
+
         reward = (post_park_num - pre_park_num)*3 - 0.5 + reach_entry*50 + punishment
         
         self.rewards.append(reward)
@@ -251,15 +264,25 @@ nrow-1,0 ---------------ncol-1,nrow-1
                 if unit.edge_state[i] == 1:
                     obs_state[i,coord[1],coord[0]] = 1
 
-        ##根据智能体方向切换obs_state顺序
+        
+
+        #如obs_state == 1，则park_num_matrix取负
+        p_now = np.copy(self.park_num_matrix)
+        for i in range(4):
+            for j in range(self.nrow):
+                for k in range(self.ncol):
+                    if obs_state[i,j,k] == 1:
+                        p_now[i,j,k] = -p_now[i,j,k]
+
+        #根据智能体方向切换p_now顺序
         if self.agent_dir == 1:
-            obs_state = np.roll(obs_state,-1,axis=0)
+            p_now = np.roll(p_now,-1,axis=0)
         elif self.agent_dir == 2:
-            obs_state = np.roll(obs_state,-2,axis=0)
+            p_now = np.roll(p_now,-2,axis=0)
         elif self.agent_dir == 3:
-            obs_state = np.roll(obs_state,-3,axis=0)
+            p_now = np.roll(p_now,-3,axis=0)
                 
-        obs_total = np.concatenate((self.park_num_matrix,obs_state,obs_lane),axis=0)
+        obs_total = np.concatenate((p_now,obs_lane),axis=0)
 
         center = self.units_pack.get_unit_byState(self.agent_state).coord
         self.obs = np.zeros((len(obs_total),self.vision_range,self.vision_range))
@@ -290,7 +313,7 @@ nrow-1,0 ---------------ncol-1,nrow-1
         result = result.astype(np.float32)
         return result
     
-    def show_observation(self):
+    def __show_observation(self):
         '''
         显示当前观察
         '''
@@ -306,26 +329,22 @@ nrow-1,0 ---------------ncol-1,nrow-1
         car_num_down = self.obs[2,:,:]
         car_num_right = self.obs[3,:,:]
 
-        state_up = self.obs[4,:,:]
-        state_left = self.obs[5,:,:]
-        state_down = self.obs[6,:,:]
-        state_right = self.obs[7,:,:]
-
+        
         for i in range(car_num_up.shape[0]):
             for j in range(car_num_up.shape[1]):
-                if state_up[i,j] == 1:
+                if car_num_up[i,j] < 0:
                     plt.text(j,i-0.35,f"{car_num_up[i,j]}",ha="center",va="center",color="green",fontsize=6)
                 else:
                     plt.text(j,i-0.35,f"{car_num_up[i,j]}",ha="center",va="center",color="red",fontsize=6)
-                if state_down[i,j] == 1:
+                if car_num_down[i,j] < 0:
                     plt.text(j,i+0.35,f"{car_num_down[i,j]}",ha="center",va="center",color="green",fontsize=6)
                 else:
                     plt.text(j,i+0.35,f"{car_num_down[i,j]}",ha="center",va="center",color="red",fontsize=6)
-                if state_left[i,j] == 1:
+                if car_num_left[i,j] < 0:
                     plt.text(j-0.35,i,f"{car_num_left[i,j]}",ha="center",va="center",color="green",fontsize=6,rotation=90)
                 else:
                     plt.text(j-0.35,i,f"{car_num_left[i,j]}",ha="center",va="center",color="red",fontsize=6,rotation=90)
-                if state_right[i,j] == 1:
+                if car_num_right[i,j] < 0:
                     plt.text(j+0.35,i,f"{car_num_right[i,j]}",ha="center",va="center",color="green",fontsize=6,rotation=-90)
                 else:
                     plt.text(j+0.35,i,f"{car_num_right[i,j]}",ha="center",va="center",color="red",fontsize=6,rotation=-90)
@@ -525,11 +544,7 @@ nrow-1,0 ---------------ncol-1,nrow-1
         else:
             return np.transpose(np.array(pygame.surfarray.pixels3d(canvas)),axes=(1,0,2))
     
-    def __show_observation(self):
-        '''
-        显示当前观察
-        '''
-        pass
+    
 
     def __draw_rec(self,canvas,coord,color,scale = (1,1),offset = (0,0)):
         x,y = coord

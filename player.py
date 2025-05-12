@@ -45,7 +45,6 @@ def main():
             done = terminated or truncated
 
             park.render()
-            park.show_observation()
             time.sleep(0.1)
 
         if done:

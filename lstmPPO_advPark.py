@@ -42,7 +42,7 @@ print(f"Using device: {device}")
 
 policy_kwargs = dict(
     activation_fn=torch.nn.ReLU,
-    net_arch=dict(pi=[512,512,256],vf=[512,512,256]),
+    net_arch=dict(pi=[256,512,256],vf=[256,512,256]),
     lstm_hidden_size=512,
     n_lstm_layers=1,
     shared_lstm=False,
@@ -64,13 +64,13 @@ model = RecurrentPPO(
     ent_coef=0.05,
     vf_coef= 0.5,
     max_grad_norm=0.5,
-    learning_rate=0.002
+    learning_rate=0.005
 )
 
 eval_callback = EvalCallback(vec_env,
                              best_model_save_path="./parking_best_model",
                              log_path="./parking_eval_log",
-                             eval_freq=4000,
+                             eval_freq=3000,
                              n_eval_episodes=5,
                              deterministic=False,
                              verbose=0,
@@ -81,6 +81,6 @@ env.model = model
 
 callbacks = CallbackList([eval_callback])
 
-total_timesteps = 2000000
+total_timesteps = 1000000
 
 model.learn(total_timesteps=total_timesteps,progress_bar=True,callback=callbacks)
