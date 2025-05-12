@@ -1,6 +1,10 @@
 from envs.simple_park import SimplePark
 import keyboard
 import time
+import sys
+import os
+sys.path.append(os.path.abspath(__file__))
+
 
 def main():
 

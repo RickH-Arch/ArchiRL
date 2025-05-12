@@ -6,16 +6,19 @@ from typing import Optional
 import pygame
 import matplotlib.pyplot as plt
 import platform
+import torch
 
 import os
 from PIL import Image
 
+import math
+
 
 SYSTEM = platform.system()
-if SYSTEM == "Windows":
-    plt.ion()
-    fig_mgr = plt.get_current_fig_manager()
-    fig_mgr.window.geometry("+0+0")
+#if SYSTEM == "Windows":
+#    plt.ion()
+#     fig_mgr = plt.get_current_fig_manager()
+#     fig_mgr.window.geometry("+0+0")
 import datetime
 TIME_NOW = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -60,10 +63,12 @@ nrow-1,0 ---------------ncol-1,nrow-1
         
         self.action_space = Discrete(4) #动作空间，0：向前，1：向后，2：向左，3：向右
 
-        self.observation_space = Box(low=-1,high=1,shape=(self.vision_range*self.vision_range *4 +  
-                                                          self.vision_range*self.vision_range*2 +
-                                                         1 +#当前智能体动作
-                                                         1 #当前智能体方向  
+        #461
+        self.observation_space = Box(low=0,high=4,shape=(self.vision_range*self.vision_range *4 +  #周边的停车数量信息，4 -> 4条边  
+                                                          self.vision_range*self.vision_range*4 +  #周边的停车状态信息（是否已是停车位）
+                                                          self.vision_range*self.vision_range*1 +  #周边单元信息， -1:车道， 0:未定义， 1: 出入口
+                                                         1*10 +#当前智能体动作
+                                                         1*10 #当前智能体方向  
                                                          ,),dtype=np.float32)
         
         self.ncol = self.units_pack.units_arr.shape[1]
@@ -78,7 +83,24 @@ nrow-1,0 ---------------ncol-1,nrow-1
         self.window = None
         self.window_size_per_block = 64
         self.clock = None
+
+        #提前计算停车数量的全范围矩阵，避免在每个step重复计算
+        self.park_num_matrix = np.zeros((4,self.nrow,self.ncol))
         
+        for unit in self.units_pack.get_flatten_units():
+            coord = unit.coord
+            for i in range(4):
+                self.park_num_matrix[i,coord[1],coord[0]] = unit.edge_carNum[i]
+
+        self.model = None
+        self.epoch_count = 0
+
+        self.best_avg_reward = -np.inf
+        self.max_park_num = 0
+                
+
+
+
     def reset(self,seed:Optional[int] = None,options:Optional[dict] = None):
         random.seed(seed)
         self.iter_count += 1
@@ -86,7 +108,8 @@ nrow-1,0 ---------------ncol-1,nrow-1
         if len(self.entrance_states) == 0:
             self.agent_state = random.choice(self.all_states)
         else:
-            self.agent_state = random.choice(self.entrance_states)
+            #self.agent_state = random.choice(self.entrance_states)
+            self.agent_state = self.entrance_states[0]
 
         
         self.start_state = self.agent_state
@@ -108,7 +131,10 @@ nrow-1,0 ---------------ncol-1,nrow-1
         else:
             self.agent_dir = random.choice(accessible_edges)
 
-        print(f"智能体初始方向：{self.agent_dir}")
+        #print(f"智能体初始方向：{self.agent_dir}")
+
+        self.action = 0
+
         obs =  self.observe()
         return obs,{}
     
@@ -139,7 +165,7 @@ nrow-1,0 ---------------ncol-1,nrow-1
             self.traj[traj] += 1
         else:
             self.traj[traj] = 1
-        print(f"next_state:{next_state},legal:{legal}")
+        #print(f"next_state:{next_state},legal:{legal}")
 
         reach_entry = False
         if legal:
@@ -155,9 +181,11 @@ nrow-1,0 ---------------ncol-1,nrow-1
             unit.turn_to_lane()
 
         post_park_num = self.units_pack.get_total_park_num()
+        self.park_num = post_park_num
 
         punishment = (1-legal) * -50
         reward = (post_park_num - pre_park_num)*3 - 0.5 + reach_entry*50 + punishment
+        
         self.rewards.append(reward)
 
         truncated = self.step_count >= self.max_step
@@ -166,17 +194,35 @@ nrow-1,0 ---------------ncol-1,nrow-1
         obs = self.observe()
 
         if terminated:
-            avg_reward = sum(self.rewards)/len(self.rewards)
-            avg_reward = round(avg_reward,3)
-            total_reward = sum(self.rewards)
-            if not truncated:
-                print(f"------所有出入口均被访问过------parking count:{post_park_num}------avg reward:{avg_reward}-------total reward:{total_reward}")
-            else:
-                print(f"------环境截断:{truncated}------parking count:{post_park_num}------avg reward:{avg_reward}-------total reward:{total_reward}")
+            try:
+                self.epoch_count += 1
+                sum_reward = sum(self.rewards)
+                
+                avg_reward = sum(self.rewards)/len(self.rewards)
 
-            if self.save:
-                #TODO:保存当前环境和模型
+                avg_reward = round(avg_reward,2)
+                total_reward = sum(self.rewards)
+                if not truncated:
+                    print(f"------正常结束ep:{self.epoch_count}|step:{self.step_count}------parking count:{post_park_num}------avg reward:{avg_reward}-------total reward:{total_reward}")
+                else:
+                    print(f"------环境截断ep:{self.epoch_count}|step:{self.step_count}------parking count:{post_park_num}------avg reward:{avg_reward}-------total reward:{total_reward}")
+
+                if self.save:
+                    
+                            
+                    if avg_reward > self.best_avg_reward :
+                        self.best_avg_reward = avg_reward
+                        #self.__save_model()
+                        self.__save_img()
+                    elif post_park_num >= self.max_park_num:
+                        self.max_park_num = post_park_num
+                        #self.__save_model()
+                        self.__save_img()
+                    elif self.epoch_count % 100 == 0:
+                        self.__save_img()
+            except Exception as e:
                 pass
+                
 
         return obs,reward,terminated,truncated,{"env_state":"step"}
     
@@ -192,8 +238,101 @@ nrow-1,0 ---------------ncol-1,nrow-1
         '''
         观察当前状态
         '''
-        #TODO: 观察当前状态
-        return []
+        #获得全范围矩阵
+        obs_state = np.zeros((4,self.nrow,self.ncol))
+        obs_lane = np.zeros((1,self.nrow,self.ncol))
+
+        #遍历所有状态
+        for unit in self.units_pack.get_flatten_units():
+            coord = unit.coord
+            if unit.is_lane:
+                obs_lane[0,coord[1],coord[0]] = 1
+            for i in range(4):
+                if unit.edge_state[i] == 1:
+                    obs_state[i,coord[1],coord[0]] = 1
+
+        ##根据智能体方向切换obs_state顺序
+        if self.agent_dir == 1:
+            obs_state = np.roll(obs_state,-1,axis=0)
+        elif self.agent_dir == 2:
+            obs_state = np.roll(obs_state,-2,axis=0)
+        elif self.agent_dir == 3:
+            obs_state = np.roll(obs_state,-3,axis=0)
+                
+        obs_total = np.concatenate((self.park_num_matrix,obs_state,obs_lane),axis=0)
+
+        center = self.units_pack.get_unit_byState(self.agent_state).coord
+        self.obs = np.zeros((len(obs_total),self.vision_range,self.vision_range))
+        for i in range(len(obs_total)):
+            sub_mat = self.__extract_submatrix(obs_total[i],center,self.vision_range)
+            sub_mat[sub_mat == -1] = 0
+            self.obs[i] = sub_mat
+
+        for i in range(len(self.obs)):
+            cut = self.obs[i,:,:]
+            if self.agent_dir == 1:
+                cut = np.rot90(cut,k=3)
+            elif self.agent_dir == 2:
+                cut = np.rot90(cut,k=2)
+            elif self.agent_dir == 3:
+                cut = np.rot90(cut,k=1)
+            self.obs[i,:,:] = cut
+
+        result = self.obs
+        result = np.transpose(result,(1,2,0))
+        result = result.reshape(-1)
+
+        #add action and direction
+        action = np.array([self.action/4]*10)
+        direction = np.array([self.agent_dir]*10)
+
+        result = np.concatenate((result,action,direction),axis=0)
+        result = result.astype(np.float32)
+        return result
+    
+    def show_observation(self):
+        '''
+        显示当前观察
+        '''
+        plt.close()
+        
+        #lane
+        lane_mat = self.obs[-1,:,:]
+        
+        plt.imshow(lane_mat,cmap="gray")
+
+        car_num_up = self.obs[0,:,:]
+        car_num_left = self.obs[1,:,:]
+        car_num_down = self.obs[2,:,:]
+        car_num_right = self.obs[3,:,:]
+
+        state_up = self.obs[4,:,:]
+        state_left = self.obs[5,:,:]
+        state_down = self.obs[6,:,:]
+        state_right = self.obs[7,:,:]
+
+        for i in range(car_num_up.shape[0]):
+            for j in range(car_num_up.shape[1]):
+                if state_up[i,j] == 1:
+                    plt.text(j,i-0.35,f"{car_num_up[i,j]}",ha="center",va="center",color="green",fontsize=6)
+                else:
+                    plt.text(j,i-0.35,f"{car_num_up[i,j]}",ha="center",va="center",color="red",fontsize=6)
+                if state_down[i,j] == 1:
+                    plt.text(j,i+0.35,f"{car_num_down[i,j]}",ha="center",va="center",color="green",fontsize=6)
+                else:
+                    plt.text(j,i+0.35,f"{car_num_down[i,j]}",ha="center",va="center",color="red",fontsize=6)
+                if state_left[i,j] == 1:
+                    plt.text(j-0.35,i,f"{car_num_left[i,j]}",ha="center",va="center",color="green",fontsize=6,rotation=90)
+                else:
+                    plt.text(j-0.35,i,f"{car_num_left[i,j]}",ha="center",va="center",color="red",fontsize=6,rotation=90)
+                if state_right[i,j] == 1:
+                    plt.text(j+0.35,i,f"{car_num_right[i,j]}",ha="center",va="center",color="green",fontsize=6,rotation=-90)
+                else:
+                    plt.text(j+0.35,i,f"{car_num_right[i,j]}",ha="center",va="center",color="red",fontsize=6,rotation=-90)
+
+        
+        plt.show()
+
     
     def close(self):
         if self.window is not None:
@@ -295,11 +434,11 @@ nrow-1,0 ---------------ncol-1,nrow-1
                 end_coord = list(end_coord)
 
                 if direction == 0:
-                    end_coord[1]+=0.3
+                    end_coord[1]-=0.3
                 elif direction == 1:
                     end_coord[0]-=0.3
                 elif direction == 2:
-                    end_coord[1]-=0.3
+                    end_coord[1]+=0.3
                 elif direction == 3:
                     end_coord[0]+=0.3
                 pygame.draw.line(canvas,traj_color,(start_coord[0]*self.window_size_per_block+self.window_size_per_block//2,
@@ -419,6 +558,64 @@ nrow-1,0 ---------------ncol-1,nrow-1
             offset = (0.4,0)
         return scale,offset
     
+    def __extract_submatrix(self,matrix:np.ndarray,center:tuple,vision_range:int):
+        '''提取当前智能体感知范围的子矩阵,超出范围的为-1'''
+        center_x,center_y = center
+        # 计算子矩阵的起始和结束索引
+        half_size = vision_range // 2
+        start_x = center_x - half_size
+        end_x = center_x + half_size + 1
+        start_y = center_y - half_size
+        end_y = center_y + half_size + 1
+        
+        # 创建矩阵，初始化为-1
+        result = np.full((vision_range,vision_range),-1)
+        
+        # 计算实际可用的矩阵范围
+        matrix_rows, matrix_cols = matrix.shape
+        src_x_start = max(0, start_x)
+        src_x_end = min(matrix_cols, end_x)
+        src_y_start = max(0, start_y)
+        src_y_end = min(matrix_rows, end_y)
+        
+        # 计算结果矩阵中需要填充的位置
+        dst_x_start = max(0, -start_x)
+        dst_x_end = vision_range - max(0, end_x - matrix_cols)
+        dst_y_start = max(0, -start_y)
+        dst_y_end = vision_range - max(0, end_y - matrix_rows)
+        
+        # 复制矩阵中有效的部分到结果矩阵
+        result[dst_y_start:dst_y_end,dst_x_start:dst_x_end] = \
+            matrix[src_y_start:src_y_end,src_x_start:src_x_end]
+        
+        return result
+    
+    def __save_model(self):
+        if self.model is not None:
+            folder = f"./parking_best_model"
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+
+            #delete all files in the folder
+            for file in os.listdir(folder):
+                os.remove(os.path.join(folder,file))
+
+            path = os.path.join(folder,f"model_epoch{self.epoch_count}_{TIME_NOW}.pth")
+            
+            torch.save(self.model.policy.state_dict(),path)
+            print(f"模型已保存到{path}")
+
+    def __save_img(self):
+        img = self.__render_frame()
+        img = Image.fromarray(img)
+        folder = f"./parking_img/parking_img_{datetime.datetime.now().strftime('%Y%m%d')}"
+        path = os.path.join(folder,f"epoch:{self.epoch_count}_num:{self.park_num}_avgrwd:{self.best_avg_reward}_{datetime.datetime.now().strftime('%Y%m%d-%H:%M:%S')}.png")
+        #是否存在路径
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        img.save(path)
+        
+
     def coordToState(self,coord):
         x,y = coord
         return int(y*self.ncol+x)
