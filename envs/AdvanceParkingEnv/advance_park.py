@@ -151,7 +151,7 @@ nrow-1,0 ---------------ncol-1,nrow-1
         self.step_count += 1
         pre_state = self.agent_state
         self.action = action
-
+        
         #向前
         if action == 0:
             self.agent_dir = self.agent_dir
@@ -184,18 +184,18 @@ nrow-1,0 ---------------ncol-1,nrow-1
         pre_park_num = self.units_pack.get_total_park_num()
 
         unit = self.units_pack.get_unit_byState( self.agent_state)
-        if not unit.is_lane:
-            unit.turn_to_lane()
+        
+        unit.turn_to_lane(self.agent_dir)
 
         post_park_num = self.units_pack.get_total_park_num()
         self.park_num = post_park_num
 
         punishment = (1-legal) * -50
         #左右转、断头路惩罚
-        if action == 1 or action == 3:
-            punishment += 5
-        elif action == 2:
-            punishment += 10
+        if action == 2 or action == 3:
+            punishment -= 5
+        elif action == 1:
+            punishment -= 10
 
         reward = (post_park_num - pre_park_num)*3 - 0.5 + reach_entry*50 + punishment
         
@@ -242,7 +242,7 @@ nrow-1,0 ---------------ncol-1,nrow-1
     def render(self):
         if self.render_mode == "human":
             self.__render_frame()
-            self.__show_observation()
+            #self.__show_observation()
         else:
             return self.__render_frame()
         
@@ -399,13 +399,20 @@ nrow-1,0 ---------------ncol-1,nrow-1
         canvas.fill((255,255,255))
         cMgr = ColorManager()
 
+        #绘制车道
+        park_color = cMgr.getColor("path_color")
+        for unit in self.units_pack.get_flatten_units():
+            if unit.is_lane:
+                coord = unit.coord
+                self.__draw_rec(canvas,coord,park_color)
+
         #绘制车位
         vacant_park_color = cMgr.getColor("vacant_park_color")
         park_color = cMgr.getColor("park_color")
         boundary_color = cMgr.getColor("boundary_color")
         for unit in self.units_pack.get_flatten_units():
-            if unit.is_lane:
-                continue
+            # if unit.is_lane:
+            #     continue
             coord = unit.coord
             for i in range(4):
                 scale,offset = self.__get_park_scale_and_offset(i,unit.edge_carNum[i])
@@ -417,12 +424,6 @@ nrow-1,0 ---------------ncol-1,nrow-1
                 else:
                     self.__draw_rec(canvas,coord,boundary_color,scale,offset)
 
-        #绘制车道
-        park_color = cMgr.getColor("path_color")
-        for unit in self.units_pack.get_flatten_units():
-            if unit.is_lane:
-                coord = unit.coord
-                self.__draw_rec(canvas,coord,park_color)
 
         #绘制出入口
         for unit in self.entrance_units:

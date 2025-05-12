@@ -53,8 +53,8 @@ class ParkUnitMatPack:
         '''
         num = 0
         for unit in self.get_flatten_units():
-            if unit.is_lane:
-                continue
+            # if unit.is_lane:
+            #     continue
             num += unit.get_car_num()
         return num
     
@@ -148,12 +148,34 @@ class ParkUnit:
                 accessible.append(i)
         return accessible
     
-    def turn_to_lane(self):
+    def turn_to_lane(self,dir:int):
         '''
         转换为车道
         '''
+
+        #移除来路车道车位
+        opp_dir = (dir + 2) % 4
+        if self.neighbor_unit[opp_dir] is not None and self.neighbor_unit[opp_dir].is_lane:
+            self.neighbor_unit[opp_dir].edge_state[dir] = 0
+        
+        #self.edge_state = [0] * 4
+    
+        
+        if dir == 0 or dir == 2:
+            if self.is_lane == False:
+                self.edge_state[1] = 1
+                self.edge_state[3] = 1
+            
+        elif dir == 1 or dir == 3:
+            if self.is_lane == False:
+                self.edge_state[0] = 1
+                self.edge_state[2] = 1
+
+        if self.neighbor_unit[dir] is not None and self.neighbor_unit[dir].is_lane == False:
+            self.edge_state[dir] = 1
+        self.edge_state[(dir+2)%4] = 0
+
         self.is_lane = True
-        self.edge_state = [0] * 4
         for i in range(4):
             if self.neighbor_unit[i] is None or self.neighbor_unit[i].is_lane or self.neighbor_unit[i].is_entrance:
                 continue
@@ -170,45 +192,57 @@ class ParkUnit:
         '''
         获取单元内车辆数
         '''
-
-
         total = 0
-        real = [0]*4
-        n = 0
-        ind = []
-        for i in range(4):
-            if self.edge_state[i] == 1:
-                real[i] = self.edge_carNum[i]
-                n+=1
-                ind.append(i)
         
-        
-        if n == 0:
-            total =  0
-        elif n == 1:
-            total = sum(real)
-        elif n == 2:
-            #对向停车？
-            if abs(ind[0] - ind[1]) == 2:
-                total = real[ind[0]] + real[ind[1]]
-            #相邻两边停车？
-            else:
-                total = max(real[ind[0]],real[ind[1]])+1
-        elif n == 3:
-            #find the missing edge
-            me = -1
+        if self.is_lane == False:
+            real = [0]*4
+            n = 0
+            ind = []
             for i in range(4):
-                if self.edge_state[i] != 1:
-                    me = i
-                    break
-            if me == -1:
-                total = 0
+                if self.edge_state[i] == 1:
+                    real[i] = self.edge_carNum[i]
+                    n+=1
+                    ind.append(i)
+            if n == 0:
+                total =  0
+            elif n == 1:
+                total = sum(real)
+            elif n == 2:
+                #对向停车？
+                if abs(ind[0] - ind[1]) == 2:
+                    total = real[ind[0]] + real[ind[1]]
+                #相邻两边停车？
+                else:
+                    total = max(real[ind[0]],real[ind[1]])+1
+            elif n == 3:
+                #find the missing edge
+                me = -1
+                for i in range(4):
+                    if self.edge_state[i] != 1:
+                        me = i
+                        break
+                if me == -1:
+                    total = 0
+                else:
+                    total = self.edge_carNum[(me-1)%4] + self.edge_carNum[(me+1)%4]
             else:
-                total = self.edge_carNum[(me-1)%4] + self.edge_carNum[(me+1)%4]
+                n1 = self.edge_carNum[0] + self.edge_carNum[2]
+                n2 = self.edge_carNum[1] + self.edge_carNum[3]
+                total = max(n1,n2)
+            
         else:
-            n1 = self.edge_carNum[0] + self.edge_carNum[2]
-            n2 = self.edge_carNum[1] + self.edge_carNum[3]
-            total = max(n1,n2)
+            for i in range(4):
+                if self.edge_state[i] == 1:
+                    if self.neighbor_unit[i] is not None and self.neighbor_unit[i].is_lane == False:
+                        continue
+                    #如相邻单元为墙壁，则认为有1辆侧方位停车
+                    elif self.neighbor_unit[i] is None or self.neighbor_unit[i].edge_carNum[(i+2)%4] == 0:
+                        total += 1
+                    #如相邻单元为车道，则认为是单排停车位
+                    else:
+                        total += self.edge_carNum[i]/2
+
         return total * 0.5
+
         
         
