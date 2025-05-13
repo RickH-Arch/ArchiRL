@@ -61,7 +61,7 @@ def linear_schedule(initial_lr: float):
 
 policy_kwargs = dict(
     activation_fn=torch.nn.Tanh,
-    net_arch=dict(pi=[512,256,256],vf=[512,256,256]),
+    net_arch=dict(pi=[256,256,256],vf=[256,256,256]),
     lstm_hidden_size=512,
     n_lstm_layers=1,
     shared_lstm=False,
@@ -101,6 +101,6 @@ env.model = model
 
 callbacks = CallbackList([eval_callback])
 
-total_timesteps = 1000000
+total_timesteps = 500000
 
 model.learn(total_timesteps=total_timesteps,progress_bar=True,callback=callbacks)
