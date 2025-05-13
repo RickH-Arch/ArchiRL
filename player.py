@@ -7,12 +7,12 @@ import os
 sys.path.append(os.path.abspath(__file__))
 
 
-file_path = 'envs/AdvanceParkingEnv/manual_park_data.csv'
+file_path = 'envs/AdvanceParkingEnv/manual2.csv'
 
 def main():
     reader = ManualParkReader()
-    units_pack = reader.read(file_path)
-
+    units_pack = reader.read(file_path,[(6,4)])
+    unit = units_pack.get_unit_byState(39)
     config = {
         "units_pack": units_pack,
         "vision_range": 7,

@@ -3,7 +3,7 @@ import numpy as np
 from envs.AdvanceParkingEnv.park_unit import ParkUnit,ParkUnitMatPack
 
 class ManualParkReader:
-    def read(self,file_path:str):
+    def read(self,file_path:str,entrance_coord:list[tuple]):
         df = pd.read_csv(file_path,header=None)
         rows,cols = df.shape
         blocks = []
@@ -31,8 +31,8 @@ class ManualParkReader:
             units_mat.append(units_row)
         units_pack = ParkUnitMatPack(units_mat)
 
-        units_pack.get_unit_byCoord((7,12)).is_entrance = True
-        units_pack.get_unit_byCoord((14,12)).is_entrance = True
+        for coord in entrance_coord:
+            units_pack.get_unit_byCoord(coord).is_entrance = True
         units_pack.connect_neighbor()
 
         print("read pack with shape:",units_pack.units_arr.shape)

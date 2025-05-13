@@ -63,20 +63,20 @@ nrow-1,0 ---------------ncol-1,nrow-1
         
         self.action_space = Discrete(4) #动作空间，0：向前，1：向后，2：向左，3：向右
 
-        #461
-        # self.observation_space = Box(low=0,high=4,shape=(self.vision_range*self.vision_range *4 +  #周边的停车数量信息，4 -> 4条边  
-        #                                                   self.vision_range*self.vision_range*4 +  #周边的停车状态信息（是否已是停车位）
-        #                                                   self.vision_range*self.vision_range*1 +  #周边单元信息， -1:车道， 0:未定义， 1: 出入口
-        #                                                  1*10 +#当前智能体动作
-        #                                                  1*10 #当前智能体方向  
-        #                                                  ,),dtype=np.float32)
-        
-        #265
-        self.observation_space = Box(low=-4,high=4,shape=(self.vision_range*self.vision_range *4 +  #周边的停车数量信息，4 -> 4条边 ,已是停车位为负，未定义停车位为正
-                                                          self.vision_range*self.vision_range*1 +  #周边单元信息， -1:车道， 0:未定义， 1: 出入口
-                                                          1*10 +#当前智能体动作
-                                                         1*10 #当前智能体方向  
+        #466
+        self.observation_space = Box(low=0,high=1,shape=(self.vision_range*self.vision_range *4 +  #周边的停车数量信息，4 -> 4条边  
+                                                          self.vision_range*self.vision_range*4 +  #周边的停车状态信息（是否已是停车位）
+                                                          self.vision_range*self.vision_range*1 +   #周边单元信息， -1:车道， 0:未定义， 1: 出入口
+                                                         #1*10 +#当前智能体动作
+                                                         1*5 #当前智能体方向  
                                                          ,),dtype=np.float32)
+        
+        #245
+        # self.observation_space = Box(low=-4,high=4,shape=(self.vision_range*self.vision_range *4 +  #周边的停车数量信息，4 -> 4条边 ,已是停车位为负，未定义停车位为正
+        #                                                   self.vision_range*self.vision_range*1   #周边单元信息， -1:车道， 0:未定义， 1: 出入口
+        #                                                   #1*10 +#当前智能体动作
+        #                                                  #1*10 #当前智能体方向  
+        #                                                  ,),dtype=np.float32)
         
         self.ncol = self.units_pack.units_arr.shape[1]
         self.nrow = self.units_pack.units_arr.shape[0]
@@ -115,8 +115,8 @@ nrow-1,0 ---------------ncol-1,nrow-1
         if len(self.entrance_states) == 0:
             self.agent_state = random.choice(self.all_states)
         else:
-            #self.agent_state = random.choice(self.entrance_states)
-            self.agent_state = self.entrance_states[0]
+            self.agent_state = random.choice(self.entrance_states)
+            #self.agent_state = self.entrance_states[0]
 
         
         self.start_state = self.agent_state
@@ -177,27 +177,33 @@ nrow-1,0 ---------------ncol-1,nrow-1
         reach_entry = False
         if legal:
             self.agent_state = next_state
-
+        
             unit = self.units_pack.get_unit_byState(self.agent_state)
             reach_entry = unit.is_entrance and not unit.is_lane
+
+        
+        #别一出去就回来
+        if len(self.entrance_states) == 1 and self.step_count < 15:
+            reach_entry == False
 
         pre_park_num = self.units_pack.get_total_park_num()
 
         unit = self.units_pack.get_unit_byState( self.agent_state)
         
-        unit.turn_to_lane(self.agent_dir)
+        if legal:
+            unit.turn_to_lane(self.agent_dir)
 
         post_park_num = self.units_pack.get_total_park_num()
         self.park_num = post_park_num
 
-        punishment = (1-legal) * -50
+        punishment = (1-legal) * -20
         #左右转、断头路惩罚
         if action == 2 or action == 3:
-            punishment -= 5
+            punishment -= 2
         elif action == 1:
-            punishment -= 10
+            punishment -= 5
 
-        reward = (post_park_num - pre_park_num)*3 - 0.5 + reach_entry*50 + punishment
+        reward = (post_park_num - pre_park_num)*3 -0.1 + reach_entry*50 + punishment
         
         self.rewards.append(reward)
 
@@ -207,34 +213,33 @@ nrow-1,0 ---------------ncol-1,nrow-1
         obs = self.observe()
 
         if terminated:
-            try:
-                self.epoch_count += 1
-                sum_reward = sum(self.rewards)
+            
+            self.epoch_count += 1
+            sum_reward = sum(self.rewards)
+            
+            avg_reward = sum(self.rewards)/len(self.rewards)
+
+            avg_reward = round(avg_reward,2)
+            total_reward = sum(self.rewards)
+            if not truncated:
+                print(f"------正常结束ep:{self.epoch_count}|step:{self.step_count}------pCnt:{post_park_num}------avgRwd:{np.round(avg_reward,2)}-------totalRwd:{np.round(total_reward,2)}")
+            else:
+                print(f"------环境截断ep:{self.epoch_count}|step:{self.step_count}------pCnt:{post_park_num}------avgRwd:{np.round(avg_reward,2)}-------totalRwd:{np.round(total_reward,2)}")
+            reward += post_park_num*5
+            if self.save:
                 
-                avg_reward = sum(self.rewards)/len(self.rewards)
-
-                avg_reward = round(avg_reward,2)
-                total_reward = sum(self.rewards)
-                if not truncated:
-                    print(f"------正常结束ep:{self.epoch_count}|step:{self.step_count}------parking count:{post_park_num}------avg reward:{avg_reward}-------total reward:{total_reward}")
-                else:
-                    print(f"------环境截断ep:{self.epoch_count}|step:{self.step_count}------parking count:{post_park_num}------avg reward:{avg_reward}-------total reward:{total_reward}")
-
-                if self.save:
-                    
-                            
-                    if avg_reward > self.best_avg_reward :
-                        self.best_avg_reward = avg_reward
-                        #self.__save_model()
-                        self.__save_img()
-                    elif post_park_num >= self.max_park_num:
-                        self.max_park_num = post_park_num
-                        #self.__save_model()
-                        self.__save_img()
-                    elif self.epoch_count % 100 == 0:
-                        self.__save_img()
-            except Exception as e:
-                pass
+                        
+                if avg_reward > self.best_avg_reward :
+                    self.best_avg_reward = avg_reward
+                    #self.__save_model()
+                    self.__save_img()
+                elif post_park_num >= self.max_park_num:
+                    self.max_park_num = post_park_num
+                    #self.__save_model()
+                    self.__save_img()
+                elif self.epoch_count % 100 == 0:
+                    self.__save_img()
+        
                 
 
         return obs,reward,terminated,truncated,{"env_state":"step"}
@@ -242,7 +247,7 @@ nrow-1,0 ---------------ncol-1,nrow-1
     def render(self):
         if self.render_mode == "human":
             self.__render_frame()
-            #self.__show_observation()
+            self.__show_observation()
         else:
             return self.__render_frame()
         
@@ -260,6 +265,8 @@ nrow-1,0 ---------------ncol-1,nrow-1
             coord = unit.coord
             if unit.is_lane:
                 obs_lane[0,coord[1],coord[0]] = 1
+            if unit.is_entrance:
+                obs_lane[0,coord[1],coord[0]] = 2
             for i in range(4):
                 if unit.edge_state[i] == 1:
                     obs_state[i,coord[1],coord[0]] = 1
@@ -267,22 +274,26 @@ nrow-1,0 ---------------ncol-1,nrow-1
         
 
         #如obs_state == 1，则park_num_matrix取负
+        # p_now = np.copy(self.park_num_matrix)
+        # for i in range(4):
+        #     for j in range(self.nrow):
+        #         for k in range(self.ncol):
+        #             if obs_state[i,j,k] == 1:
+        #                 p_now[i,j,k] = -p_now[i,j,k]
+
         p_now = np.copy(self.park_num_matrix)
-        for i in range(4):
-            for j in range(self.nrow):
-                for k in range(self.ncol):
-                    if obs_state[i,j,k] == 1:
-                        p_now[i,j,k] = -p_now[i,j,k]
 
         #根据智能体方向切换p_now顺序
         if self.agent_dir == 1:
+            obs_state = np.roll(obs_state,-1,axis=0)
             p_now = np.roll(p_now,-1,axis=0)
         elif self.agent_dir == 2:
+            obs_state = np.roll(obs_state,-2,axis=0)
             p_now = np.roll(p_now,-2,axis=0)
         elif self.agent_dir == 3:
+            obs_state = np.roll(obs_state,-3,axis=0)
             p_now = np.roll(p_now,-3,axis=0)
-                
-        obs_total = np.concatenate((p_now,obs_lane),axis=0)
+        obs_total = np.concatenate((p_now,obs_state,obs_lane),axis=0)
 
         center = self.units_pack.get_unit_byState(self.agent_state).coord
         self.obs = np.zeros((len(obs_total),self.vision_range,self.vision_range))
@@ -302,15 +313,22 @@ nrow-1,0 ---------------ncol-1,nrow-1
             self.obs[i,:,:] = cut
 
         result = self.obs
-        result = np.transpose(result,(1,2,0))
+        #将result前四项和最后项归一化
+        max = np.max(result[:4,:,:])
+        result[:4,:,:] = result[:4,:,:] / max
+        max = np.max(result[-1,:,:])
+        result[-1,:,:] = result[-1,:,:] / max
+        #result = np.transpose(result,(1,2,0))
         result = result.reshape(-1)
 
         #add action and direction
-        action = np.array([self.action/4]*10)
-        direction = np.array([self.agent_dir]*10)
+        #action = np.array([self.action/4]*10)
+        direction = np.array([self.agent_dir/4]*5)
 
-        result = np.concatenate((result,action,direction),axis=0)
+        result = np.concatenate((result,direction),axis=0)
         result = result.astype(np.float32)
+        #print(result)
+        
         return result
     
     def __show_observation(self):
@@ -323,28 +341,36 @@ nrow-1,0 ---------------ncol-1,nrow-1
         lane_mat = self.obs[-1,:,:]
         
         plt.imshow(lane_mat,cmap="gray")
+        plt.xticks(np.arange(-0.5, self.vision_range+0.5, 1))  # 自定义 x 轴刻度
+        plt.yticks(np.arange(-0.5, self.vision_range+0.5, 1))  # 自定义 y 轴刻度
+        plt.grid(True, color='white', linestyle='--', linewidth=0.5)
 
-        car_num_up = self.obs[0,:,:]
-        car_num_left = self.obs[1,:,:]
-        car_num_down = self.obs[2,:,:]
-        car_num_right = self.obs[3,:,:]
+        car_num_up = np.round(self.obs[0,:,:],1)
+        car_num_left = np.round(self.obs[1,:,:],1)
+        car_num_down = np.round(self.obs[2,:,:],1)
+        car_num_right = np.round(self.obs[3,:,:],1)
+
+        state_up = self.obs[4,:,:]
+        state_left = self.obs[5,:,:]
+        state_down = self.obs[6,:,:]
+        state_right = self.obs[7,:,:]
 
         
         for i in range(car_num_up.shape[0]):
             for j in range(car_num_up.shape[1]):
-                if car_num_up[i,j] < 0:
+                if state_up[i,j] == 1:
                     plt.text(j,i-0.35,f"{car_num_up[i,j]}",ha="center",va="center",color="green",fontsize=6)
                 else:
                     plt.text(j,i-0.35,f"{car_num_up[i,j]}",ha="center",va="center",color="red",fontsize=6)
-                if car_num_down[i,j] < 0:
+                if state_down[i,j] == 1:
                     plt.text(j,i+0.35,f"{car_num_down[i,j]}",ha="center",va="center",color="green",fontsize=6)
                 else:
                     plt.text(j,i+0.35,f"{car_num_down[i,j]}",ha="center",va="center",color="red",fontsize=6)
-                if car_num_left[i,j] < 0:
+                if state_left[i,j] == 1:
                     plt.text(j-0.35,i,f"{car_num_left[i,j]}",ha="center",va="center",color="green",fontsize=6,rotation=90)
                 else:
                     plt.text(j-0.35,i,f"{car_num_left[i,j]}",ha="center",va="center",color="red",fontsize=6,rotation=90)
-                if car_num_right[i,j] < 0:
+                if state_right[i,j] == 1:
                     plt.text(j+0.35,i,f"{car_num_right[i,j]}",ha="center",va="center",color="green",fontsize=6,rotation=-90)
                 else:
                     plt.text(j+0.35,i,f"{car_num_right[i,j]}",ha="center",va="center",color="red",fontsize=6,rotation=-90)
