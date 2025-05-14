@@ -12,18 +12,22 @@ sys.path.append(os.path.abspath(__file__))
 
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 
-from envs.AdvanceParkingEnv.manual_park_reader import ManualParkReader
+from envs.AdvanceParkingEnv.park_reader import ParkReader
 
+import datetime
+TIMENOW = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+
+data_name = '4街3'
 #file_path = 'envs/AdvanceParkingEnv/manual_park_data.csv'
-file_path = 'envs/AdvanceParkingEnv/manual2.csv'
-reader = ManualParkReader()
+file_path = f'datas/{data_name}.csv'
+reader = ParkReader()
 #units_pack = reader.read(file_path,[(7,12),(14,12)])
 units_pack = reader.read(file_path,[(6,4)])
 config = {
     "units_pack": units_pack,
     "vision_range": 7,
     "save":True,
-    "max_step_index": 2
+    "max_step_index": 1.5
 }
 
 env = AdvancePark(config)
@@ -81,14 +85,14 @@ model = RecurrentPPO(
     n_epochs=8,
     gamma = 0.99,
     gae_lambda = 0.95,
-    ent_coef=0.02,
+    ent_coef=0.06,
     vf_coef= 0.5,
     max_grad_norm=0.5,
-    learning_rate=linear_schedule(0.0005)
+    learning_rate=linear_schedule(0.001)
 )
 
 eval_callback = EvalCallback(vec_env,
-                             best_model_save_path="./parking_best_model",
+                             best_model_save_path=f"./{data_name}_{TIMENOW}",
                              log_path="./parking_eval_log",
                              eval_freq=3000,
                              n_eval_episodes=5,
@@ -101,6 +105,6 @@ env.model = model
 
 callbacks = CallbackList([eval_callback])
 
-total_timesteps = 500000
+total_timesteps = 200000
 
 model.learn(total_timesteps=total_timesteps,progress_bar=True,callback=callbacks)

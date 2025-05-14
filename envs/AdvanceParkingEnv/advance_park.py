@@ -193,17 +193,17 @@ nrow-1,0 ---------------ncol-1,nrow-1
         if legal:
             unit.turn_to_lane(self.agent_dir)
 
-        post_park_num = self.units_pack.get_total_park_num()
+        post_park_num = np.round(self.units_pack.get_total_park_num(),1)
         self.park_num = post_park_num
 
         punishment = (1-legal) * -20
         #左右转、断头路惩罚
         if action == 2 or action == 3:
-            punishment -= 2
+            punishment -= 1
         elif action == 1:
             punishment -= 5
 
-        reward = (post_park_num - pre_park_num)*3 -0.1 + reach_entry*50 + punishment
+        reward = (post_park_num - pre_park_num)*5 -0.5 + reach_entry*20 + punishment
         
         self.rewards.append(reward)
 
@@ -215,17 +215,20 @@ nrow-1,0 ---------------ncol-1,nrow-1
         if terminated:
             
             self.epoch_count += 1
+            #reward += (post_park_num - self.max_step/2)*10
+            self.rewards[-1] =reward
             sum_reward = sum(self.rewards)
             
             avg_reward = sum(self.rewards)/len(self.rewards)
 
             avg_reward = round(avg_reward,2)
             total_reward = sum(self.rewards)
+
             if not truncated:
                 print(f"------正常结束ep:{self.epoch_count}|step:{self.step_count}------pCnt:{post_park_num}------avgRwd:{np.round(avg_reward,2)}-------totalRwd:{np.round(total_reward,2)}")
             else:
                 print(f"------环境截断ep:{self.epoch_count}|step:{self.step_count}------pCnt:{post_park_num}------avgRwd:{np.round(avg_reward,2)}-------totalRwd:{np.round(total_reward,2)}")
-            reward += post_park_num*5
+            
             if self.save:
                 
                         

@@ -240,7 +240,7 @@ class ParkUnit:
                         total += 1
                     #如相邻单元为车道，则认为是单排停车位
                     else:
-                        total += self.edge_carNum[i]/2
+                        total += self.edge_carNum[i]/2.5
 
         return total * 0.5
 

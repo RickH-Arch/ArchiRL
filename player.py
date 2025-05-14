@@ -1,4 +1,4 @@
-from envs.AdvanceParkingEnv.manual_park_reader import ManualParkReader
+from envs.AdvanceParkingEnv.park_reader import ParkReader
 from envs.AdvanceParkingEnv.advance_park import AdvancePark
 import keyboard
 import time
@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(__file__))
 file_path = 'envs/AdvanceParkingEnv/manual2.csv'
 
 def main():
-    reader = ManualParkReader()
+    reader = ParkReader()
     units_pack = reader.read(file_path,[(6,4)])
     unit = units_pack.get_unit_byState(39)
     config = {
