@@ -10,24 +10,26 @@ import sys
 import os
 sys.path.append(os.path.abspath(__file__))
 
-from stable_baselines3.common.callbacks import EvalCallback, CallbackList
+from stable_baselines3.common.callbacks import EvalCallback, CallbackList,CheckpointCallback
 
 from envs.AdvanceParkingEnv.park_reader import ParkReader
+
 
 import datetime
 TIMENOW = datetime.datetime.now().strftime("%Y%m%d_%H%M")
 
-data_name = '4街3'
-#file_path = 'envs/AdvanceParkingEnv/manual_park_data.csv'
-file_path = f'datas/{data_name}.csv'
+#data_name = '4街3'
+data_name = '二办-2f'
+
+data_path = f'data/{data_name}.csv'
 reader = ParkReader()
-#units_pack = reader.read(file_path,[(7,12),(14,12)])
-units_pack = reader.read(file_path,[(6,4)])
+units_pack = reader.read(data_path,[(7,12),(14,12)])
+#units_pack = reader.read(data_path,[(5,4)])
 config = {
     "units_pack": units_pack,
     "vision_range": 7,
     "save":True,
-    "max_step_index": 1.5
+    "max_step_index": 2
 }
 
 env = AdvancePark(config)
@@ -80,19 +82,44 @@ model = RecurrentPPO(
     verbose=0,
     tensorboard_log="./lstmPPO_tensorboard",
     device=device,
-    n_steps = 200,
-    batch_size=128,
+    n_steps = 1200,
+    batch_size=256,
     n_epochs=8,
     gamma = 0.99,
     gae_lambda = 0.95,
-    ent_coef=0.06,
+    ent_coef=0.05,
     vf_coef= 0.5,
     max_grad_norm=0.5,
-    learning_rate=linear_schedule(0.001)
+    learning_rate=linear_schedule(0.001),
+    clip_range=0.2
 )
 
+# model = RecurrentPPO.load(path = "./result_model/4街3_20250514/best_model.zip",
+#                           seed=seed,
+#     policy="MlpLstmPolicy",
+#     env=vec_env,
+#     policy_kwargs=policy_kwargs,
+#     verbose=0,
+#     tensorboard_log="./lstmPPO_tensorboard",
+#     device=device,
+#     n_steps = 1200,
+#     batch_size=256,
+#     n_epochs=8,
+#     gamma = 0.99,
+#     gae_lambda = 0.95,
+#     ent_coef=0.02,
+#     vf_coef= 0.5,
+#     max_grad_norm=0.5,
+#     learning_rate=linear_schedule(0.0005),
+#     clip_range=0.2)
+#model.set_env(vec_env)
+
+
+
+
+
 eval_callback = EvalCallback(vec_env,
-                             best_model_save_path=f"./{data_name}_{TIMENOW}",
+                             best_model_save_path=f"./result_model/{data_name}_{TIMENOW}",
                              log_path="./parking_eval_log",
                              eval_freq=3000,
                              n_eval_episodes=5,
@@ -100,11 +127,12 @@ eval_callback = EvalCallback(vec_env,
                              verbose=0,
                              render=False
                              )
+checkpoint_callback = CheckpointCallback(save_freq=6000,save_path=f"./result_model/checkpoint/c_{data_name}_{TIMENOW}")
 
 env.model = model
 
 callbacks = CallbackList([eval_callback])
 
-total_timesteps = 200000
+total_timesteps = 2000000
 
 model.learn(total_timesteps=total_timesteps,progress_bar=True,callback=callbacks)

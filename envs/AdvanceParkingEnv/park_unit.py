@@ -210,10 +210,19 @@ class ParkUnit:
             elif n == 2:
                 #对向停车？
                 if abs(ind[0] - ind[1]) == 2:
-                    total = real[ind[0]] + real[ind[1]]
+                    n1 = self.edge_carNum[(ind[0]+1)%4]
+                    n2 = self.edge_carNum[(ind[1]+1)%4]
+                    max_n = max(n1,n2)
+                    if max_n == 3:
+                        total = real[ind[0]] + real[ind[1]] 
+                    else:
+                        total = max(real[ind[0]],real[ind[1]])
                 #相邻两边停车？
                 else:
-                    total = max(real[ind[0]],real[ind[1]])+1
+                    total = max(real[ind[0]],real[ind[1]])
+                    min_n = min(real[ind[0]],real[ind[1]])
+                    if min_n == 3:
+                        total += 1
             elif n == 3:
                 #find the missing edge
                 me = -1
@@ -224,25 +233,51 @@ class ParkUnit:
                 if me == -1:
                     total = 0
                 else:
-                    total = self.edge_carNum[(me-1)%4] + self.edge_carNum[(me+1)%4]
+                    n1 = self.edge_carNum[me]
+                    n2 = self.edge_carNum[(me+2)%4]
+                    max_n = max(n1,n2)
+                    if max_n == 3:
+                        total = self.edge_carNum[(me-1)%4] + self.edge_carNum[(me+1)%4]
+                    else:
+                        total = max(self.edge_carNum[(me-1)%4],self.edge_carNum[(me+1)%4])
             else:
-                n1 = self.edge_carNum[0] + self.edge_carNum[2]
-                n2 = self.edge_carNum[1] + self.edge_carNum[3]
-                total = max(n1,n2)
+                max_n = max(real)
+                index = real.index(max_n)
+                if max_n == 3:
+                    total = self.edge_carNum[(index-1)%4] + self.edge_carNum[(index+1)%4]
+                else:
+                    total = max(self.edge_carNum[(index-1)%4],self.edge_carNum[(index+1)%4])
             
         else:
             for i in range(4):
                 if self.edge_state[i] == 1:
-                    if self.neighbor_unit[i] is not None and self.neighbor_unit[i].is_lane == False:
+                    neib = self.neighbor_unit[i]
+                    if neib is not None and neib.is_lane == False:
                         continue
                     #如相邻单元为墙壁，则认为有1辆侧方位停车
-                    elif self.neighbor_unit[i] is None or self.neighbor_unit[i].edge_carNum[(i+2)%4] == 0:
-                        total += 1
+                    elif neib is None or neib.edge_carNum[(i+2)%4] == 0:
+                        #如果宽度够停一辆侧方位
+                        if self.edge_carNum[(i+1)%4] == 3:
+                            total += 1
                     #如相邻单元为车道，则认为是单排停车位
-                    else:
-                        total += self.edge_carNum[i]/2.5
+                    elif neib is not None and neib.is_lane:
 
-        return total * 0.5
+                        #仅在两侧不是侧方位时可以是停车位
+                        s1 = self.edge_state[(i-1)%4]
+                        s2 = self.edge_state[(i+1)%4]
+                        if s1 == 1 or s2 == 1:
+                            continue
+
+                        n1 = self.edge_carNum[(i-1)%4]
+                        n2 = self.edge_carNum[(i+1)%4]
+                        min_n = min(n1,n2)
+                        if min_n == 3:
+                            total += self.edge_carNum[i]/2.5 #不鼓励单排停车
+                        else:
+                            #单排侧方位
+                            total += 0.4
+
+        return total
 
         
         

@@ -48,6 +48,7 @@ nrow-1,0 ---------------ncol-1,nrow-1
         assert self.vision_range % 2 == 1, "vision_range must be odd"
         self.render_mode = config.get("render_mode", "rgb_array")
         self.save = config.get("save", True)
+        self.train = config.get("train", True)
 
         self.all_states = list(range(self.units_pack.units_arr.size))
         
@@ -104,6 +105,8 @@ nrow-1,0 ---------------ncol-1,nrow-1
 
         self.best_avg_reward = -np.inf
         self.max_park_num = 0
+
+        self.clean_last_train_result = True
                 
 
 
@@ -183,8 +186,8 @@ nrow-1,0 ---------------ncol-1,nrow-1
 
         
         #别一出去就回来
-        if len(self.entrance_states) == 1 and self.step_count < 15:
-            reach_entry == False
+        # if len(self.entrance_states) == 1 and self.step_count < 15:
+        #     reach_entry == False
 
         pre_park_num = self.units_pack.get_total_park_num()
 
@@ -203,7 +206,7 @@ nrow-1,0 ---------------ncol-1,nrow-1
         elif action == 1:
             punishment -= 5
 
-        reward = (post_park_num - pre_park_num)*5 -0.5 + reach_entry*20 + punishment
+        reward = (post_park_num - pre_park_num)*10 -1 + reach_entry*50 + punishment
         
         self.rewards.append(reward)
 
@@ -215,42 +218,45 @@ nrow-1,0 ---------------ncol-1,nrow-1
         if terminated:
             
             self.epoch_count += 1
-            #reward += (post_park_num - self.max_step/2)*10
-            self.rewards[-1] =reward
-            sum_reward = sum(self.rewards)
+            
+            # delta = post_park_num - self.max_step/2
+            # if delta > 0:
+            #     reward += (delta)**2
+            # else:
+            #     reward -= (delta)**2
+            # reward += float(delta) * 5
+            # self.rewards[-1] =reward
             
             avg_reward = sum(self.rewards)/len(self.rewards)
 
             avg_reward = round(avg_reward,2)
-            total_reward = sum(self.rewards)
+            total_reward = round(sum(self.rewards),2)
 
             if not truncated:
-                print(f"------正常结束ep:{self.epoch_count}|step:{self.step_count}------pCnt:{post_park_num}------avgRwd:{np.round(avg_reward,2)}-------totalRwd:{np.round(total_reward,2)}")
+                print(f"------正常结束ep:{self.epoch_count}|step:{self.step_count}------pCnt:{post_park_num}------avgRwd:{avg_reward}-------totalRwd:{total_reward}")
             else:
-                print(f"------环境截断ep:{self.epoch_count}|step:{self.step_count}------pCnt:{post_park_num}------avgRwd:{np.round(avg_reward,2)}-------totalRwd:{np.round(total_reward,2)}")
+                print(f"------环境截断ep:{self.epoch_count}|step:{self.step_count}------pCnt:{post_park_num}------avgRwd:{avg_reward}-------totalRwd:{total_reward}")
             
             if self.save:
-                
+                if avg_reward> self.best_avg_reward or post_park_num > self.max_park_num or self.train == False:
+                    if avg_reward > self.best_avg_reward:
+                        self.best_avg_reward = avg_reward
+                    if post_park_num > self.max_park_num:
+                        self.max_park_num = post_park_num
+                    self.__save_img(f"epoch:{self.epoch_count}_num:{post_park_num}_avgrwd:{avg_reward}_totalrwd:{total_reward}")
                         
-                if avg_reward > self.best_avg_reward :
-                    self.best_avg_reward = avg_reward
-                    #self.__save_model()
-                    self.__save_img()
-                elif post_park_num >= self.max_park_num:
-                    self.max_park_num = post_park_num
-                    #self.__save_model()
-                    self.__save_img()
-                elif self.epoch_count % 100 == 0:
-                    self.__save_img()
-        
                 
-
+                elif self.epoch_count % 100 == 0 and self.train:
+                    self.__save_img(f"epoch:{self.epoch_count}_num:{post_park_num}_avgrwd:{avg_reward}_totalrwd:{total_reward}")
+        
+        if type(reward) is not np.float32:
+            reward = float(reward)
         return obs,reward,terminated,truncated,{"env_state":"step"}
     
     def render(self):
         if self.render_mode == "human":
             self.__render_frame()
-            self.__show_observation()
+            #self.__show_observation()
         else:
             return self.__render_frame()
         
@@ -650,14 +656,25 @@ nrow-1,0 ---------------ncol-1,nrow-1
             torch.save(self.model.policy.state_dict(),path)
             print(f"模型已保存到{path}")
 
-    def __save_img(self):
+    def __save_img(self,name:str):
         img = self.__render_frame()
         img = Image.fromarray(img)
-        folder = f"./parking_img/parking_img_{datetime.datetime.now().strftime('%Y%m%d')}"
-        path = os.path.join(folder,f"epoch:{self.epoch_count}_num:{self.park_num}_avgrwd:{self.best_avg_reward}_{datetime.datetime.now().strftime('%Y%m%d-%H:%M:%S')}.png")
+        if self.train:
+            folder = f"./result_train/parking_img_{datetime.datetime.now().strftime('%Y%m%d')}"
+        else:
+            folder = f"./result_play/parking_img_{datetime.datetime.now().strftime('%Y%m%d')}"
         #是否存在路径
         if not os.path.exists(folder):
             os.makedirs(folder)
+        if self.clean_last_train_result and self.train:
+            #delete all files in the folder
+            for file in os.listdir(folder):
+                if file.endswith(".png"):
+                    os.remove(os.path.join(folder,file))
+            self.clean_last_train_result = False
+        
+        path = os.path.join(folder,f"{name}_{datetime.datetime.now().strftime('%Y%m%d-%H:%M:%S')}.png")
+        
         img.save(path)
         
 
