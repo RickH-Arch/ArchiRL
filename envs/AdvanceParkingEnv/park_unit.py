@@ -86,6 +86,7 @@ class ParkUnit:
         self.edge_state = [0] * 4 # 0: 空闲，1: 占用
         self.is_lane = False # 是否为车道
         self.is_entrance = False # 是否为入口
+        self.is_occupied = False # 是否被占用,被占用单元在生成结果后会自动剔除车位
 
         self.edge_width = [-1] * 4 # 边可通行宽度
         self.neighbor_unit = [None] * 4 # 相邻单元索引
@@ -102,15 +103,23 @@ class ParkUnit:
                 continue
             #上
             if unit.coord[0] == self.coord[0] and unit.coord[1] == self.coord[1] - 1:
+                if unit.edge_carNum[2] != self.edge_carNum[0]:
+                    print(f"{self.coord} and {unit.coord} have different car_num")
                 self.neighbor_unit[0] = unit
             #下
             if unit.coord[0] == self.coord[0] and unit.coord[1] == self.coord[1] + 1:
+                if unit.edge_carNum[0] != self.edge_carNum[2]:
+                    print(f"{self.coord} and {unit.coord} have different car_num")
                 self.neighbor_unit[2] = unit
             #左
             if unit.coord[0] == self.coord[0] - 1 and unit.coord[1] == self.coord[1]:
+                if unit.edge_carNum[3] != self.edge_carNum[1]:
+                    print(f"{self.coord} and {unit.coord} have different car_num")
                 self.neighbor_unit[1] = unit
             #右
             if unit.coord[0] == self.coord[0] + 1 and unit.coord[1] == self.coord[1]:
+                if unit.edge_carNum[1] != self.edge_carNum[3]:
+                    print(f"{self.coord} and {unit.coord} have different car_num")
                 self.neighbor_unit[3] = unit
 
             if None not in self.neighbor_unit:

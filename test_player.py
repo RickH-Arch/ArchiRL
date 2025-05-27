@@ -1,58 +1,32 @@
-from envs.AdvanceParkingEnv.park_reader import ParkReader
-from envs.AdvanceParkingEnv.advance_park import AdvancePark
-import keyboard
+import platform
+from envs.FineGridPark.fine_grid_park_env import FineGridPark
 import time
 import sys
 import os
+import pandas as pd
+import numpy as np
 sys.path.append(os.path.abspath(__file__))
 
+SYSTEM = platform.system()
 
-file_path = 'envs/AdvanceParkingEnv/manual2.csv'
+if SYSTEM == "Windows":
+    import keyboard
 
-def main():
-    reader = ParkReader()
-    units_pack = reader.read(file_path,[(6,4)])
-    unit = units_pack.get_unit_byState(39)
-    config = {
-        "units_pack": units_pack,
+file_path = './data/fineGrid_park/4街3_fineGrid.csv'
+
+matrix = pd.read_csv(file_path,header=None).values
+# 将matrix中所有float('nan')替换为0
+for array in matrix:
+    for i in range(len(array)):
+        if type(array[i]) == float:
+            if np.isnan(array[i]):
+                array[i] = 0
+
+config = {
+        "matrix": matrix,
+        "div_ind": 2,
         "vision_range": 7,
         "render_mode": "human"
     }
 
-    park = AdvancePark(config)
-    park.reset()
-    park.render()
-
-    done = False
-    total_reward = 0
-
-    while not done:
-        action = None
-
-        if keyboard.is_pressed("up"):
-            action = 0#forward
-        elif keyboard.is_pressed("down"):
-            action = 1#backward
-        elif keyboard.is_pressed("left"):
-            action = 2#left
-        elif keyboard.is_pressed("right"):
-            action = 3#right
-
-        if action is not None:
-            observation, reward, terminated, truncated, info = park.step(action)
-            print(f"reward: {reward}, terminated: {terminated}, truncated: {truncated}")
-            total_reward += reward
-            done = terminated or truncated
-
-            park.render()
-            time.sleep(0.1)
-
-        if done:
-            print(f"回合结束，总奖励: {total_reward}")
-            observation, info = park.reset()
-        
-
-    park.close()
-
-if __name__ == "__main__":
-    main()
+park = FineGridPark(config=config)
